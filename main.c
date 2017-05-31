@@ -15,6 +15,10 @@ struct Point {
 
 int gameBoard[ROW_SIZE][COL_SIZE];
 
+void PrintInputError();
+
+void ReleaseMemoryEndExit();
+
 void StartPlaying(int myRepresentaionNumber);
 
 void CheckMove(struct Point *p, int *moveFlag, int myNumber);
@@ -41,14 +45,6 @@ struct Point *ParseStruct(char *move);
 
 void initializeStruct(struct Play *p);
 
-int main() {
-
-    int myRepresentaionNumber = 1;
-    memset(gameBoard, 0, ROW_SIZE * COL_SIZE * sizeof(int));
-
-    StartPlaying(myRepresentaionNumber);
-    return 0;
-}
 
 struct Point *ParseStruct(char *move) {
     int x;
@@ -56,34 +52,34 @@ struct Point *ParseStruct(char *move) {
 
     char *temp = strtok(move, ",");
     if (strlen(temp) > 2) {
-        //todo to big number
-        printf("err");
+        return NULL;
     }
     x = temp[1] - 48;
     temp = strtok(NULL, ",");
     if (strlen(temp) > 2) {
-        //todo to big number
-        printf("err");
+        return NULL;
     }
     y = temp[0] - 48;
 
     struct Point *point = malloc(sizeof(struct Point));
     if (point == NULL) {
         //todo handle
+    } else {
+        point->x = x;
+        point->y = y;
+        return point;
     }
-    point->x = x;
-    point->y = y;
-    return point;
+
 }
 
 void CheckMove(struct Point *p, int *moveFlag, int myNumber) {
 
     if ((p->x >= ROW_SIZE) || (p->x < 0) || (p->y < 0) || (p->y >= COL_SIZE)) {
-        //todo wrong move
+        return;
     }
 
     if (gameBoard[p->x][p->y] != 0) {
-        //todo wrong move
+        return;
     }
 
     //check all possible directions
@@ -96,6 +92,18 @@ void CheckMove(struct Point *p, int *moveFlag, int myNumber) {
     CheckConvertToRightAndUp(p, moveFlag, myNumber);
     CheckConvertToRightAndDown(p, moveFlag, myNumber);
 
+}
+
+void PrintInputError() {
+    if (write(STDOUT_FILENO, "please enter valid location", strlen("please enter valid location")) < 0) {
+        perror("failed to write to screen");
+        ReleaseMemoryEndExit();
+    }
+}
+
+void ReleaseMemoryEndExit() {
+    //todo release shared memory
+    exit(-1);
 }
 
 #pragma clang diagnostic push
@@ -118,20 +126,27 @@ void StartPlaying(int myNumber) {
         moved = 0;
         scanf("%s", move);
         moveCoordinats = ParseStruct(move);
+        if (moveCoordinats == NULL) {
+            PrintInputError();
+        }
         CheckMove(moveCoordinats, &moved, myNumber);
 
         //if not legal move free struct and get move again
         while (moved == 0) {
             free(moveCoordinats);
-
+            PrintInputError();
             scanf("%s", move);
             moveCoordinats = ParseStruct(move);
             CheckMove(moveCoordinats, &moved, myNumber);
         }
-
         //move was legal and we executed the move
         free(moveCoordinats);
         PrintBoard();
+        if (write(STDOUT_FILENO, "waiting for the second player",
+                  strlen("waiting for the second player")) < 0) {
+            perror("failed to write to screen");
+            ReleaseMemoryEndExit();
+        }
     }
 }
 
@@ -143,7 +158,7 @@ void CheckConvertToRight(struct Point *p, int *moveFlag, int myNumber) {
     int endY = -1;
     int startX = p->x;
     int startY = p->y;
-    //todo add check that we are not out of bound
+
     //check if right from the given move there is an empty space or my piece
     if ((startY + 1 >= COL_SIZE) || (gameBoard[startX][startY + 1] == 0) ||
         (gameBoard[startX][startY + 1] == myNumber)) {
@@ -504,4 +519,13 @@ void PrintBoard() {
             exit(-1);
         }
     }
+}
+
+int main() {
+
+    int myRepresentaionNumber = 1;
+    memset(gameBoard, 0, ROW_SIZE * COL_SIZE * sizeof(int));
+
+    StartPlaying(myRepresentaionNumber);
+    return 0;
 }
