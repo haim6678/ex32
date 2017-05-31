@@ -25,6 +25,8 @@ void ExecuteMove(struct Point *p, int *moveFlag, int myNumber, int turn);
 
 int CheckEnd();
 
+int CheckWinner(int num);
+
 void CheckConvertToRight(struct Point *p, int *moveFlag, int myNumber);
 
 void CheckConvertToLeft(struct Point *p, int *moveFlag, int myNumber);
@@ -47,6 +49,14 @@ struct Point *ParseStruct(char *move);
 
 void initializeStruct(struct Play *p);
 
+int main() {
+
+    int myRepresentaionNumber = 1;
+    memset(gameBoard, 0, ROW_SIZE * COL_SIZE * sizeof(int));
+    PrintBoard();
+    StartPlaying(myRepresentaionNumber);
+    return 0;
+}
 
 struct Point *ParseStruct(char *move) {
     int x;
@@ -108,9 +118,66 @@ void ReleaseMemoryEndExit() {
     //todo release shared memory
     exit(-1);
 }
- int CheckEnd(){
 
- }
+int CheckWinner(int flag) {
+
+    int i = 0;
+    int j = 0;
+    int white = 0;
+    int black = 0;
+    for (i = 0; i < ROW_SIZE; i++) {
+        for (j = 0; j < COL_SIZE; j++) {
+
+            if (gameBoard[i][j] == 1) {
+                white++;
+            } else if (gameBoard[i][j] == 2) {
+                black++;
+            }
+        }
+    }
+    if (flag == 1) {
+        if (black > white) {
+            return 2;
+        } else if (white > black) {
+            return 1;
+        } else {
+            return 3;
+        }
+    } else {
+        if ((black > 0) && (white == 0)) {
+            return 2;
+        } else if ((white > 0) && (black == 0)) {
+            return 1;
+        } else{
+            return -1;
+        }
+    }
+}
+
+int CheckEnd() {
+
+    int flag = 0;
+    int i = 0;
+    int j = 0;
+    for (i = 0; i < ROW_SIZE; i++) {
+        for (j = 0; j < COL_SIZE; j++) {
+            //if we
+            if (gameBoard[i][j] != 0) {
+                flag = -1;
+                break;
+            }
+        }
+    }
+
+    //we didn't found an empty space
+    if (flag == 0) {
+        return CheckWinner(1);
+        //it's  -1 ->we found an empty space then keep playing and check if left a move
+    } else {
+        return CheckWinner(0);
+    }
+}
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 
@@ -126,10 +193,8 @@ void StartPlaying(int myNumber) {
     struct Point *moveCoordinats;
     while (1) {
 
-
-        //get move
+        //get move from player
         moved = 0;
-        PrintBoard();
         scanf("%s", move);
         moveCoordinats = ParseStruct(move);
         if (moveCoordinats == NULL) {
@@ -152,16 +217,21 @@ void StartPlaying(int myNumber) {
             perror("failed to write to screen");
             ReleaseMemoryEndExit();
         }
-        //todo write move
+
+        //todo write move to memory
+
         if ((check = CheckEnd()) != -1) {
-            if (check == 0) {
-                //other ein
-            } else if (check == 1) {
-                //you win
+            if (check == 1) {
+                //white ein
+            } else if (check == 2) {
+                //black win
+            } else if (check == 3) {
+                //they are even
             }
             break;
         }
         while (1) {
+
             //todo listen to move
 
             struct Point p;
@@ -541,11 +611,3 @@ void PrintBoard() {
     }
 }
 
-int main() {
-
-    int myRepresentaionNumber = 1;
-    memset(gameBoard, 0, ROW_SIZE * COL_SIZE * sizeof(int));
-
-    StartPlaying(myRepresentaionNumber);
-    return 0;
-}
