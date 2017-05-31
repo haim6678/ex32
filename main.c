@@ -29,11 +29,11 @@ void CheckConvertToDown(struct Point *p, int *moveFlag, int myNumber);
 
 void CheckConvertToLeftAndUp(struct Point *p, int *moveFlag, int myNumber);
 
-void CheckLeftAndDown(struct Point *p, int *moveFlag, int myNumber);
+void CheckConvertToLeftAndDown(struct Point *p, int *moveFlag, int myNumber);
 
-void CheckRightAndUp(struct Point *p, int *moveFlag, int myNumber);
+void CheckConvertToRightAndUp(struct Point *p, int *moveFlag, int myNumber);
 
-void CheckRightAndDown(struct Point *p, int *moveFlag, int myNumber);
+void CheckConvertToRightAndDown(struct Point *p, int *moveFlag, int myNumber);
 
 void PrintBoard();
 
@@ -86,12 +86,15 @@ void CheckMove(struct Point *p, int *moveFlag, int myNumber) {
         //todo wrong move
     }
 
+    //check all possible directions
     CheckConvertToRight(p, moveFlag, myNumber);
     CheckConvertToLeft(p, moveFlag, myNumber);
     CheckConvertToUp(p, moveFlag, myNumber);
     CheckConvertToDown(p, moveFlag, myNumber);
     CheckConvertToLeftAndUp(p, moveFlag, myNumber);
-
+    CheckConvertToLeftAndDown(p, moveFlag, myNumber);
+    CheckConvertToRightAndUp(p, moveFlag, myNumber);
+    CheckConvertToRightAndDown(p, moveFlag, myNumber);
 
 }
 
@@ -105,9 +108,11 @@ void StartPlaying(int myNumber) {
     struct Point *moveCoordinats;
     while (1) {
 
-        //gameBoard[0][5] = 1;
-        gameBoard[2][4] = 1;
-        gameBoard[1][4] = 2;
+        gameBoard[0][2] = 1;
+        gameBoard[0][3] = 2;
+        gameBoard[2][2] = 2;
+        gameBoard[1][3] = 2;
+        gameBoard[3][1] = 1;
         PrintBoard();
         //get move
         moved = 0;
@@ -138,8 +143,10 @@ void CheckConvertToRight(struct Point *p, int *moveFlag, int myNumber) {
     int endY = -1;
     int startX = p->x;
     int startY = p->y;
+    //todo add check that we are not out of bound
     //check if right from the given move there is an empty space or my piece
-    if ((gameBoard[startX][startY + 1] == 0) || (gameBoard[startX][startY + 1] == myNumber)) {
+    if ((startY + 1 >= COL_SIZE) || (gameBoard[startX][startY + 1] == 0) ||
+        (gameBoard[startX][startY + 1] == myNumber)) {
         return;
 
         /*check if the move is legal and there is a sequence of the other player pieces
@@ -178,7 +185,8 @@ void CheckConvertToLeft(struct Point *p, int *moveFlag, int myNumber) {
     int startX = p->x;
     int startY = p->y;
     //check if left from the given move there is an empty space or my piece
-    if ((gameBoard[startX][startY - 1] == 0) || (gameBoard[startX][startY - 1] == myNumber)) {
+    if ((startY - 1 < 0) || (gameBoard[startX][startY - 1] == 0) ||
+        (gameBoard[startX][startY - 1] == myNumber)) {
         return;
 
         /*check if the move is legal and there is a sequence of the other player pieces
@@ -217,7 +225,8 @@ void CheckConvertToUp(struct Point *p, int *moveFlag, int myNumber) {
     int startX = p->x;
     int startY = p->y;
     //check if left from the given move there is an empty space or my piece
-    if ((gameBoard[startX - 1][startY] == 0) || (gameBoard[startX - 1][startY] == myNumber)) {
+    if ((startX - 1 < 0) || (gameBoard[startX - 1][startY] == 0) ||
+        (gameBoard[startX - 1][startY] == myNumber)) {
         return;
 
         /*check if the move is legal and there is a sequence of the other player pieces
@@ -255,7 +264,8 @@ void CheckConvertToDown(struct Point *p, int *moveFlag, int myNumber) {
     int startX = p->x;
     int startY = p->y;
     //check if left from the given move there is an empty space or my piece
-    if ((gameBoard[startX + 1][startY] == 0) || (gameBoard[startX + 1][startY] == myNumber)) {
+    if ((startX + 1 >= ROW_SIZE) || (gameBoard[startX + 1][startY] == 0) ||
+        (gameBoard[startX + 1][startY] == myNumber)) {
         return;
 
         /*check if the move is legal and there is a sequence of the other player pieces
@@ -294,14 +304,59 @@ void CheckConvertToLeftAndUp(struct Point *p, int *moveFlag, int myNumber) {
     int startX = p->x;
     int startY = p->y;
     //check if left from the given move there is an empty space or my piece
-    if ((gameBoard[startX + 1][startY] == 0) || (gameBoard[startX + 1][startY] == myNumber)) {
+    if ((startY - 1 < 0) || (startX - 1 < 0) || (gameBoard[startX - 1][startY - 1] == 0) ||
+        (gameBoard[startX - 1][startY - 1] == myNumber)) {
+        return;
+
+        /*check if the move is legal and there is a sequence of the other player pieces
+        /with no whitespace and in the and again my piece*/
+    } else {
+        startX--;
+        startY--;
+        while ((endX == -1) && (endY == -1) && (startX >= 0) && (startY >= 0)) {
+
+            //if there is'nt my piece in the other side from the right
+            if (gameBoard[startX][startY] == 0) {
+                break;
+            }
+            if ((gameBoard[startX][startY] == myNumber)) {
+                endX = startX;
+                endY = startY;
+            }
+            startX--;
+            startY--;
+        }
+    }
+    //if we found the move legal the change the board and update the flag to 1
+    if ((endX != -1) && (endY != -1)) {
+        *moveFlag = 1;
+        startX = p->x;
+        startY = p->y;
+        while ((startX > endX) && (startY > endY)) {
+            gameBoard[startX][startY] = myNumber;
+            startX--;
+            startY--;
+        }
+    }
+}
+
+
+void CheckConvertToLeftAndDown(struct Point *p, int *moveFlag, int myNumber) {
+    int endX = -1;
+    int endY = -1;
+    int startX = p->x;
+    int startY = p->y;
+    //check if left from the given move there is an empty space or my piece
+    if ((startY - 1 < 0) || (startX + 1 >= ROW_SIZE) || (gameBoard[startX + 1][startY - 1] == 0) ||
+        (gameBoard[startX + 1][startY - 1] == myNumber)) {
         return;
 
         /*check if the move is legal and there is a sequence of the other player pieces
         /with no whitespace and in the and again my piece*/
     } else {
         startX++;
-        while ((endX == -1) && (endY == -1) && (startX < ROW_SIZE)) {
+        startY--;
+        while ((endX == -1) && (endY == -1) && (startX < ROW_SIZE) && (startY >= 0)) {
 
             //if there is'nt my piece in the other side from the right
             if (gameBoard[startX][startY] == 0) {
@@ -312,6 +367,7 @@ void CheckConvertToLeftAndUp(struct Point *p, int *moveFlag, int myNumber) {
                 endY = startY;
             }
             startX++;
+            startY--;
         }
     }
     //if we found the move legal the change the board and update the flag to 1
@@ -319,19 +375,99 @@ void CheckConvertToLeftAndUp(struct Point *p, int *moveFlag, int myNumber) {
         *moveFlag = 1;
         startX = p->x;
         startY = p->y;
-        while (startX < endX) {
+        while ((startX < endX) && (startY > endY)) {
             gameBoard[startX][startY] = myNumber;
             startX++;
+            startY--;
         }
     }
 }
 
-/*
-void CheckLeftAndDown(struct Point *p, int *moveFlag) {}
 
-void CheckRightAndUp(struct Point *p, int *moveFlag) {}
+void CheckConvertToRightAndUp(struct Point *p, int *moveFlag, int myNumber) {
+    int endX = -1;
+    int endY = -1;
+    int startX = p->x;
+    int startY = p->y;
+    //check if left from the given move there is an empty space or my piece
+    if ((startY + 1 >= COL_SIZE) || (startX - 1 < 0) || (gameBoard[startX - 1][startY + 1] == 0) ||
+        (gameBoard[startX - 1][startY + 1] == myNumber)) {
+        return;
 
-void CheckRightAndDown(struct Point *p, int *moveFlag) {}*/
+        /*check if the move is legal and there is a sequence of the other player pieces
+        /with no whitespace and in the and again my piece*/
+    } else {
+        startX--;
+        startY++;
+        while ((endX == -1) && (endY == -1) && (startX >= 0) && (startY < COL_SIZE)) {
+
+            //if there is'nt my piece in the other side from the right
+            if (gameBoard[startX][startY] == 0) {
+                break;
+            }
+            if ((gameBoard[startX][startY] == myNumber)) {
+                endX = startX;
+                endY = startY;
+            }
+            startX--;
+            startY++;
+        }
+    }
+    //if we found the move legal the change the board and update the flag to 1
+    if ((endX != -1) && (endY != -1)) {
+        *moveFlag = 1;
+        startX = p->x;
+        startY = p->y;
+        while ((startX > endX) && (startY < endY)) {
+            gameBoard[startX][startY] = myNumber;
+            startX--;
+            startY++;
+        }
+    }
+}
+
+
+void CheckConvertToRightAndDown(struct Point *p, int *moveFlag, int myNumber) {
+    int endX = -1;
+    int endY = -1;
+    int startX = p->x;
+    int startY = p->y;
+    //check if left from the given move there is an empty space or my piece
+    if ((startY + 1 >= COL_SIZE) || (startX + 1 >= ROW_SIZE) | (gameBoard[startX + 1][startY + 1] == 0) ||
+        (gameBoard[startX + 1][startY + 1] == myNumber)) {
+        return;
+
+        /*check if the move is legal and there is a sequence of the other player pieces
+        /with no whitespace and in the and again my piece*/
+    } else {
+        startX++;
+        startY++;
+        while ((endX == -1) && (endY == -1) && (startX < ROW_SIZE) && (startY < COL_SIZE)) {
+
+            //if there is'nt my piece in the other side from the right
+            if (gameBoard[startX][startY] == 0) {
+                break;
+            }
+            if ((gameBoard[startX][startY] == myNumber)) {
+                endX = startX;
+                endY = startY;
+            }
+            startX++;
+            startY++;
+        }
+    }
+    //if we found the move legal the change the board and update the flag to 1
+    if ((endX != -1) && (endY != -1)) {
+        *moveFlag = 1;
+        startX = p->x;
+        startY = p->y;
+        while ((startX < endX) && (startY < endY)) {
+            gameBoard[startX][startY] = myNumber;
+            startX++;
+            startY++;
+        }
+    }
+}
 
 void PrintBoard() {
     int i = 0;
