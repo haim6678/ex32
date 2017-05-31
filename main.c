@@ -21,7 +21,9 @@ void ReleaseMemoryEndExit();
 
 void StartPlaying(int myRepresentaionNumber);
 
-void CheckMove(struct Point *p, int *moveFlag, int myNumber);
+void ExecuteMove(struct Point *p, int *moveFlag, int myNumber, int turn);
+
+int CheckEnd();
 
 void CheckConvertToRight(struct Point *p, int *moveFlag, int myNumber);
 
@@ -72,25 +74,26 @@ struct Point *ParseStruct(char *move) {
 
 }
 
-void CheckMove(struct Point *p, int *moveFlag, int myNumber) {
+void ExecuteMove(struct Point *p, int *moveFlag, int number, int myTurn) {
 
-    if ((p->x >= ROW_SIZE) || (p->x < 0) || (p->y < 0) || (p->y >= COL_SIZE)) {
-        return;
+    if (myTurn == 1) {
+        if ((p->x >= ROW_SIZE) || (p->x < 0) || (p->y < 0) || (p->y >= COL_SIZE)) {
+            return;
+        }
+
+        if (gameBoard[p->x][p->y] != 0) {
+            return;
+        }
     }
-
-    if (gameBoard[p->x][p->y] != 0) {
-        return;
-    }
-
     //check all possible directions
-    CheckConvertToRight(p, moveFlag, myNumber);
-    CheckConvertToLeft(p, moveFlag, myNumber);
-    CheckConvertToUp(p, moveFlag, myNumber);
-    CheckConvertToDown(p, moveFlag, myNumber);
-    CheckConvertToLeftAndUp(p, moveFlag, myNumber);
-    CheckConvertToLeftAndDown(p, moveFlag, myNumber);
-    CheckConvertToRightAndUp(p, moveFlag, myNumber);
-    CheckConvertToRightAndDown(p, moveFlag, myNumber);
+    CheckConvertToRight(p, moveFlag, number);
+    CheckConvertToLeft(p, moveFlag, number);
+    CheckConvertToUp(p, moveFlag, number);
+    CheckConvertToDown(p, moveFlag, number);
+    CheckConvertToLeftAndUp(p, moveFlag, number);
+    CheckConvertToLeftAndDown(p, moveFlag, number);
+    CheckConvertToRightAndUp(p, moveFlag, number);
+    CheckConvertToRightAndDown(p, moveFlag, number);
 
 }
 
@@ -105,7 +108,9 @@ void ReleaseMemoryEndExit() {
     //todo release shared memory
     exit(-1);
 }
+ int CheckEnd(){
 
+ }
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 
@@ -113,23 +118,24 @@ void StartPlaying(int myNumber) {
 
     char move[6];
     int moved;
+    int x;
+    int y;
+    int otherPlayerNumber;
+    int check;
+    otherPlayerNumber = 3 - myNumber;
     struct Point *moveCoordinats;
     while (1) {
 
-        gameBoard[0][2] = 1;
-        gameBoard[0][3] = 2;
-        gameBoard[2][2] = 2;
-        gameBoard[1][3] = 2;
-        gameBoard[3][1] = 1;
-        PrintBoard();
+
         //get move
         moved = 0;
+        PrintBoard();
         scanf("%s", move);
         moveCoordinats = ParseStruct(move);
         if (moveCoordinats == NULL) {
             PrintInputError();
         }
-        CheckMove(moveCoordinats, &moved, myNumber);
+        ExecuteMove(moveCoordinats, &moved, myNumber, 1);
 
         //if not legal move free struct and get move again
         while (moved == 0) {
@@ -137,15 +143,31 @@ void StartPlaying(int myNumber) {
             PrintInputError();
             scanf("%s", move);
             moveCoordinats = ParseStruct(move);
-            CheckMove(moveCoordinats, &moved, myNumber);
+            ExecuteMove(moveCoordinats, &moved, myNumber, 1);
         }
         //move was legal and we executed the move
         free(moveCoordinats);
-        PrintBoard();
         if (write(STDOUT_FILENO, "waiting for the second player",
                   strlen("waiting for the second player")) < 0) {
             perror("failed to write to screen");
             ReleaseMemoryEndExit();
+        }
+        //todo write move
+        if ((check = CheckEnd()) != -1) {
+            if (check == 0) {
+                //other ein
+            } else if (check == 1) {
+                //you win
+            }
+            break;
+        }
+        while (1) {
+            //todo listen to move
+
+            struct Point p;
+            p.x = x;
+            p.y = y;
+            ExecuteMove(&p, &moved, otherPlayerNumber, 0);
         }
     }
 }
@@ -489,27 +511,25 @@ void PrintBoard() {
     char temp[32];
     //run in loop and print
     for (i; i < ROW_SIZE; i++) {
-        write(STDOUT_FILENO, "|", strlen("|"));
+
         int j = 0;
         for (j; j < COL_SIZE; j++) {
             if ((gameBoard[i][j]) > 0) {
                 memset(temp, 32, 0);
-                sprintf(temp, "%04d", gameBoard[i][j]);
+                sprintf(temp, "%01d", gameBoard[i][j]);
                 if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
                     perror("failed to write to file");
                     exit(-1);
                 }
             } else {
-                if (write(STDOUT_FILENO, "    ", strlen("    ")) < 0) {
+                memset(temp, 32, 0);
+                sprintf(temp, "%01d", gameBoard[i][j]);
+                if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
                     perror("failed to write to file");
                     exit(-1);
                 }
             }
             if (write(STDOUT_FILENO, " ", strlen(" ")) < 0) {
-                perror("failed to write to file");
-                exit(-1);
-            }
-            if (write(STDOUT_FILENO, "|", strlen("|")) < 0) {
                 perror("failed to write to file");
                 exit(-1);
             }
