@@ -3,10 +3,12 @@
 #include <malloc.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <bits/sigaction.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 
+#define SHM_SIZE 4096
 #define ROW_SIZE 8
 #define COL_SIZE 8
 
@@ -26,7 +28,7 @@ void PrintInvalidInputError();
 
 void ReleaseMemoryEndExit();
 
-void StartPlaying(int myRepresentaionNumber);
+void StartPlaying();
 
 void ExecuteMove(struct Point *p, int *moveFlag, int myNumber, int turn);
 
@@ -56,6 +58,8 @@ struct Point *ParseStruct(char *move);
 
 void HandleSiguser1(int sig);
 
+void HandleSecondPlayer(char* data);
+
 char *memory;
 int myBoardNumber;
 
@@ -66,6 +70,7 @@ int main() {
 
     int fd_write;
     pid_t myPid;
+
     //set the board
     memset(gameBoard, 0, ROW_SIZE * COL_SIZE * sizeof(int));
     gameBoard[3][3] = 2;
@@ -91,6 +96,7 @@ int main() {
     //open fifo
     if ((fd_write = open("fifo_clientTOserver", O_WRONLY)) < 0) {
         write(STDERR_FILENO, "failed to open fifo", strlen("failed to open fifo"));
+        exit(-1);
     }
     //write to it my pid
     myPid = getpid();
@@ -98,11 +104,43 @@ int main() {
         perror("failed to write to fifo");
         exit(-1);
     }
-
-    StartPlaying(myRepresentaionNumber);
     return 0;
 }
 
+/**
+ * input - pointer to shared memory
+ * output- the second player move
+ * operation - reads from memory
+ */
+struct Point ReadFromMemory(char *data) {
+
+    int x;
+    int y;
+    while (*data == '$') {
+        if (write(STDOUT_FILENO, "Waiting for to other player to make a move \n",
+                  strlen("\"Waiting for to other player to make a move \n")) < 0) {
+            perror("failed to write to screen");
+            ReleaseMemoryEndExit();
+        }
+        sleep(1);
+    }
+
+    x = (*data) + 48;
+    (*data++);
+    y = (*data) + 48;
+    (*data++);
+    (*data++);
+    (*data++);
+    struct Point p;
+    p.y = y;
+    p.x = x;
+    return p;
+}
+
+/**
+ * input - the point a put my piece and my nuber on board
+ * operation - write it to the shared memory
+ */
 void WriteToSharedMemory(struct Point *p, int myNumber) {
     char symbol;
     char x;
@@ -118,6 +156,7 @@ void WriteToSharedMemory(struct Point *p, int myNumber) {
     *memory++ = x;
     *memory++ = y;
     *memory++ = '\0';
+    *memory++ = '$';
 }
 
 /**
@@ -126,37 +165,7 @@ void WriteToSharedMemory(struct Point *p, int myNumber) {
  *             and lets the player to choose the first move
  */
 void HandleSiguser1(int sig) {
-    int moved = 0;
-    char move[6];
-    struct Point *moveCoordinats;
-    PrintRequest();
-    scanf("%s", move);
-    moveCoordinats = ParseStruct(move);
-    //move was out of bound
-    if (moveCoordinats == NULL) {
-        PrintInvalidInputError();
-        //check if move is lega-if it's legal execute it
-    } else {
-        ExecuteMove(moveCoordinats, &moved, myBoardNumber, 1);
-    }
-
-    //if not legal move free Point struct and get move again
-    while (moved == 0) {
-        free(moveCoordinats);
-        PrintNoMoveInput();
-        PrintRequest();
-        scanf("%s", move);
-        moveCoordinats = ParseStruct(move);
-        //move was out of bound
-        if (moveCoordinats == NULL) {
-            PrintInvalidInputError();
-            //check if move is lega-if it's legal execute it
-        } else {
-            ExecuteMove(moveCoordinats, &moved, myBoardNumber, 1);
-        }
-    }
-    PrintBoard();
-    WriteToSharedMemory(moveCoordinats, myBoardNumber);
+    StartPlaying();
 }
 
 /**
@@ -353,6 +362,57 @@ void HandleEnd(int winner) {
     ReleaseMemoryEndExit();
 }
 
+void HandleSecondPlayer(char *data) {
+    struct Point p;
+    int i = 0;
+    int moved = 0;
+    char move[6];
+    struct Point *moveCoordinats;
+    int myNumber = 1;
+    //read move
+    p = ReadFromMemory(data);
+    //execute other player move
+    ExecuteMove(&p, &i, 1, 0);
+    //get your your move
+    moved = 0;
+    PrintRequest();
+    scanf("%s", move);
+    moveCoordinats = ParseStruct(move);
+    //move was out of bound
+    if (moveCoordinats == NULL) {
+        PrintInvalidInputError();
+        //check if move is lega-if it's legal execute it
+    } else {
+        ExecuteMove(moveCoordinats, &moved, myNumber, 1);
+    }
+
+    //if not legal move free Point struct and get move again
+    while (moved == 0) {
+        free(moveCoordinats);
+        PrintNoMoveInput();
+        PrintRequest();
+        scanf("%s", move);
+        moveCoordinats = ParseStruct(move);
+        //move was out of bound
+        if (moveCoordinats == NULL) {
+            PrintInvalidInputError();
+            //check if move is lega-if it's legal execute it
+        } else {
+            ExecuteMove(moveCoordinats, &moved, myNumber, 1);
+        }
+    }
+
+
+    //write it down to memory
+    PrintBoard();
+
+    WriteToSharedMemory(moveCoordinats, myNumber);
+    free(moveCoordinats);
+    //return to normal play
+    return;
+
+}
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 
@@ -360,24 +420,52 @@ void HandleEnd(int winner) {
  * input- my number on board
  * operation- runs the game,get's input,check's it,execute move,wait for other player,etc.
  */
-void StartPlaying(int myNumber) {
+void StartPlaying() {
 
     //declare variables
+    key_t key;
+    int shmid;
+    char *data;
     char move[6];
     int moved;
     int x;
     int y;
     int otherPlayerNumber;
     int check;
+    struct Point otherPlayerMove;
+    /* make the key: */
+    if ((key = ftok("ex31.c", 'k')) == -1) {
+        write(STDERR_FILENO, "failed ftok", strlen("failed ftok"));
+        exit(1);
+    }
+
+    /* connect to (and possibly create) the segment: */
+    if ((shmid = shmget(key, SHM_SIZE, 0644 | IPC_CREAT)) == -1) {
+        perror("shmget");
+        exit(1);
+    }
+
+    /* attach to the segment to get a pointer to it: */
+    data = shmat(shmid, NULL, 0);
+    if (data == (char *) (-1)) {
+        perror("shmat");
+        exit(1);
+    }
+    if (*data == '$') {
+        myBoardNumber = 2;
+    } else {
+        myBoardNumber = 1;
+        HandleSecondPlayer(data);
+    }
+
+    int myNumber = myBoardNumber;
+    //declare variables
     otherPlayerNumber = 3 - myNumber;
     struct Point *moveCoordinats;
 
     //start the game
     while (1) {
-        //check if board is full or all of it is one color
-        if ((check = CheckEnd()) != -1) {
-            HandleEnd(check);
-        }
+
         //get move from player
         moved = 0;
         PrintRequest();
@@ -407,33 +495,19 @@ void StartPlaying(int myNumber) {
             }
         }
         //move was legal and we after executing the move
-        free(moveCoordinats);
+
         //print new board
         PrintBoard();
-        //todo write move to memory
-        //check if board is full or all of it is one color
-        if ((check = CheckEnd()) != -1) {
-            HandleEnd(check);
-        }
 
-        if (write(STDOUT_FILENO, "Waiting for to other player to make a move \n",
-                  strlen("\"Waiting for to other player to make a move \n")) < 0) {
-            perror("failed to write to screen");
-            ReleaseMemoryEndExit();
-        }
+        WriteToSharedMemory(moveCoordinats, myNumber);
+        free(moveCoordinats);
+
         //wait for the second player move
-        while (1) {
-
-            //todo listen to move
-
-            struct Point p;
-            p.x = x;
-            p.y = y;
-            //execute his move on my board
-            ExecuteMove(&p, &moved, otherPlayerNumber, 0);
-        }
+        otherPlayerMove = ReadFromMemory(data);
+        ExecuteMove(&otherPlayerMove, &moved, otherPlayerNumber, 0);
     }
 }
+
 
 #pragma clang diagnostic pop
 
