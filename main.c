@@ -15,7 +15,9 @@ struct Point {
 
 int gameBoard[ROW_SIZE][COL_SIZE];
 
-void PrintInputError();
+void PrintNoMoveInput();
+
+void PrintInvalidInputError();
 
 void ReleaseMemoryEndExit();
 
@@ -47,8 +49,9 @@ void PrintBoard();
 
 struct Point *ParseStruct(char *move);
 
-void initializeStruct(struct Play *p);
-
+/**
+ *operation - the main function,runs the program
+ */
 int main() {
 
     int myRepresentaionNumber = 1;
@@ -58,25 +61,35 @@ int main() {
     return 0;
 }
 
+/**
+ * input - the string from user
+ * output - the Point struct
+ * operation - parse the user string and create a struct from is
+ */
 struct Point *ParseStruct(char *move) {
     int x;
     int y;
 
     char *temp = strtok(move, ",");
+    //more then 1 digit entered
     if (strlen(temp) > 2) {
         return NULL;
     }
     x = temp[1] - 48;
     temp = strtok(NULL, ",");
+    //more then 1 digit entered
     if (strlen(temp) > 2) {
         return NULL;
     }
     y = temp[0] - 48;
-
+    //create the struct
     struct Point *point = malloc(sizeof(struct Point));
     if (point == NULL) {
         //todo handle
     } else {
+        if ((x >= ROW_SIZE) || (x < 0) || (y < 0) || (y >= COL_SIZE)) {
+            return NULL;
+        }
         point->x = x;
         point->y = y;
         return point;
@@ -84,13 +97,14 @@ struct Point *ParseStruct(char *move) {
 
 }
 
+/**
+ * input - a point,a flag to indicate if the move was good,the player board number
+ *         and a flag if it's my input
+ * operation - runs the given point and tring to change the board
+ */
 void ExecuteMove(struct Point *p, int *moveFlag, int number, int myTurn) {
 
     if (myTurn == 1) {
-        if ((p->x >= ROW_SIZE) || (p->x < 0) || (p->y < 0) || (p->y >= COL_SIZE)) {
-            return;
-        }
-
         if (gameBoard[p->x][p->y] != 0) {
             return;
         }
@@ -107,18 +121,50 @@ void ExecuteMove(struct Point *p, int *moveFlag, int number, int myTurn) {
 
 }
 
-void PrintInputError() {
-    if (write(STDOUT_FILENO, "please enter valid location", strlen("please enter valid location")) < 0) {
+/**
+ * operation - print's that the input was wrong
+ */
+void PrintInvalidInputError() {
+    if (write(STDOUT_FILENO, "No such square \n Please choose another square",
+              strlen("No such square \n Please choose another square")) < 0) {
         perror("failed to write to screen");
         ReleaseMemoryEndExit();
     }
 }
 
+/**
+ * operation - print's that the input is not good because there is no move
+ */
+void PrintNoMoveInput() {
+    if (write(STDOUT_FILENO, "This square is invalid \n Please choose another square",
+              strlen("This square is invalid \n Please choose another square")) < 0) {
+        perror("failed to write to screen");
+        ReleaseMemoryEndExit();
+    }
+}
+
+/**
+ * operation - free the memory and exit the program
+ */
 void ReleaseMemoryEndExit() {
     //todo release shared memory
     exit(-1);
 }
 
+/**
+ * operation - print's requast the enter new position
+ */
+void PrintRequest() {
+    if (write(STDOUT_FILENO, "Please choose a square", strlen("Please choose a square")) < 0) {
+        perror("failed to write to screen");
+        ReleaseMemoryEndExit();
+    }
+}
+
+/**
+ * input - a flag that indicate the sort of check we conduct
+ * operation - check if the board is full, or there is only one color
+ */
 int CheckWinner(int flag) {
 
     int i = 0;
@@ -135,6 +181,7 @@ int CheckWinner(int flag) {
             }
         }
     }
+    //check if full who won
     if (flag == 1) {
         if (black > white) {
             return 2;
@@ -143,17 +190,21 @@ int CheckWinner(int flag) {
         } else {
             return 3;
         }
-    } else {
+        //if there is a space check what color is left on board
+    } else if (flag == 0) {
         if ((black > 0) && (white == 0)) {
             return 2;
         } else if ((white > 0) && (black == 0)) {
             return 1;
-        } else{
+        } else {
             return -1;
         }
     }
 }
 
+/**
+ * operation- check if board is full or only one color left
+ */
 int CheckEnd() {
 
     int flag = 0;
@@ -161,7 +212,7 @@ int CheckEnd() {
     int j = 0;
     for (i = 0; i < ROW_SIZE; i++) {
         for (j = 0; j < COL_SIZE; j++) {
-            //if we
+            //if we found an empty space
             if (gameBoard[i][j] != 0) {
                 flag = -1;
                 break;
@@ -178,11 +229,32 @@ int CheckEnd() {
     }
 }
 
+void HandleEnd(int winner) {
+    if (winner == 1) {
+        //white win
+        if (write(STDOUT_FILENO, "Winning player: White", strlen("Winning player: White")) < 0) {
+            perror("failed to write to screen");
+        }
+    } else if (winner == 2) {
+        //black win
+        if (write(STDOUT_FILENO, "Winning player: Black", strlen("Winning player: Black")) < 0) {
+            perror("failed to write to screen");
+        }
+    } else if (winner == 3) {
+        //they are even
+        if (write(STDOUT_FILENO, "No winning player", strlen("No winning player")) < 0) {
+            perror("failed to write to screen");
+        }
+    }
+    ReleaseMemoryEndExit();
+}
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 
 void StartPlaying(int myNumber) {
 
+    //declare variables
     char move[6];
     int moved;
     int x;
@@ -191,45 +263,58 @@ void StartPlaying(int myNumber) {
     int check;
     otherPlayerNumber = 3 - myNumber;
     struct Point *moveCoordinats;
+
+    //start the game
     while (1) {
+        //check if board is full or all of it is one color
+        if ((check = CheckEnd()) != -1) {
+            HandleEnd(check);
+        }
 
         //get move from player
         moved = 0;
+        PrintRequest();
         scanf("%s", move);
         moveCoordinats = ParseStruct(move);
+        //move was out of bound
         if (moveCoordinats == NULL) {
-            PrintInputError();
-        }
-        ExecuteMove(moveCoordinats, &moved, myNumber, 1);
-
-        //if not legal move free struct and get move again
-        while (moved == 0) {
-            free(moveCoordinats);
-            PrintInputError();
-            scanf("%s", move);
-            moveCoordinats = ParseStruct(move);
+            PrintInvalidInputError();
+            //check if move is lega-if it's legal execute it
+        } else {
             ExecuteMove(moveCoordinats, &moved, myNumber, 1);
         }
-        //move was legal and we executed the move
+
+        //if not legal move free Point struct and get move again
+        while (moved == 0) {
+            free(moveCoordinats);
+            PrintNoMoveInput();
+            PrintRequest();
+            scanf("%s", move);
+            moveCoordinats = ParseStruct(move);
+            //move was out of bound
+            if (moveCoordinats == NULL) {
+                PrintInvalidInputError();
+                //check if move is lega-if it's legal execute it
+            } else {
+                ExecuteMove(moveCoordinats, &moved, myNumber, 1);
+            }
+        }
+        //move was legal and we after executing the move
         free(moveCoordinats);
-        if (write(STDOUT_FILENO, "waiting for the second player",
-                  strlen("waiting for the second player")) < 0) {
+        //print new board
+        PrintBoard();
+        //todo write move to memory
+        //check if board is full or all of it is one color
+        if ((check = CheckEnd()) != -1) {
+            HandleEnd(check);
+        }
+
+        if (write(STDOUT_FILENO, "Waiting for to other player to make a move \n",
+                  strlen("\"Waiting for to other player to make a move \n")) < 0) {
             perror("failed to write to screen");
             ReleaseMemoryEndExit();
         }
-
-        //todo write move to memory
-
-        if ((check = CheckEnd()) != -1) {
-            if (check == 1) {
-                //white ein
-            } else if (check == 2) {
-                //black win
-            } else if (check == 3) {
-                //they are even
-            }
-            break;
-        }
+        //wait for the second player move
         while (1) {
 
             //todo listen to move
@@ -237,6 +322,7 @@ void StartPlaying(int myNumber) {
             struct Point p;
             p.x = x;
             p.y = y;
+            //execute his move on my board
             ExecuteMove(&p, &moved, otherPlayerNumber, 0);
         }
     }
@@ -577,6 +663,11 @@ void CheckConvertToRightAndDown(struct Point *p, int *moveFlag, int myNumber) {
 }
 
 void PrintBoard() {
+
+    if (write(STDOUT_FILENO, "The board is: \n", strlen("The board is: \n")) < 0) {
+        perror("failed to write to screen");
+        ReleaseMemoryEndExit();
+    }
     int i = 0;
     char temp[32];
     //run in loop and print
@@ -608,6 +699,10 @@ void PrintBoard() {
             perror("failed to write to file");
             exit(-1);
         }
+    }
+    if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
+        perror("failed to write to file");
+        exit(-1);
     }
 }
 
