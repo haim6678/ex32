@@ -3,6 +3,9 @@
 #include <malloc.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <bits/sigaction.h>
+#include <signal.h>
+#include <fcntl.h>
 
 #define ROW_SIZE 8
 #define COL_SIZE 8
@@ -16,6 +19,8 @@ struct Point {
 int gameBoard[ROW_SIZE][COL_SIZE];
 
 void PrintNoMoveInput();
+
+void PrintRequest();
 
 void PrintInvalidInputError();
 
@@ -49,16 +54,109 @@ void PrintBoard();
 
 struct Point *ParseStruct(char *move);
 
+void HandleSiguser1(int sig);
+
+char *memory;
+int myBoardNumber;
+
 /**
  *operation - the main function,runs the program
  */
 int main() {
 
-    int myRepresentaionNumber = 1;
+    int fd_write;
+    pid_t myPid;
+    //set the board
     memset(gameBoard, 0, ROW_SIZE * COL_SIZE * sizeof(int));
+    gameBoard[3][3] = 2;
+    gameBoard[4][4] = 2;
+    gameBoard[3][4] = 1;
+    gameBoard[4][3] = 1;
+    //print it
     PrintBoard();
+    //define the signal handler
+    struct sigaction sigUsrAction;
+    sigset_t sigUsrBlock;
+    sigfillset(&sigUsrBlock);
+    //set the handling function for siusr1
+    sigUsrAction.sa_handler = HandleSiguser1;
+    sigUsrAction.sa_mask = sigUsrBlock;
+    sigUsrAction.sa_flags = 0;
+    //remove the wanted signals
+    sigdelset(&sigUsrBlock, SIGINT);
+    if (sigaction(SIGUSR1, &sigUsrAction, NULL) != 0) {
+        perror("faild in sigaction");
+        exit(-1);
+    }
+    //open fifo
+    if ((fd_write = open("fifo_clientTOserver", O_WRONLY)) < 0) {
+        write(STDERR_FILENO, "failed to open fifo", strlen("failed to open fifo"));
+    }
+    //write to it my pid
+    myPid = getpid();
+    if (write(fd_write, &myPid, sizeof(pid_t)) < 0) {
+        perror("failed to write to fifo");
+        exit(-1);
+    }
+
     StartPlaying(myRepresentaionNumber);
     return 0;
+}
+
+void WriteToSharedMemory(struct Point *p, int myNumber) {
+    char symbol;
+    char x;
+    char y;
+    if (myNumber == 1) {
+        symbol = 'w';
+    } else if (myNumber == 2) {
+        symbol = 'b';
+    }
+    x = p->x + 48; //todo will work??
+    y = p->y + 48;
+    *memory++ = symbol;
+    *memory++ = x;
+    *memory++ = y;
+    *memory++ = '\0';
+}
+
+/**
+ * input -sig number
+ * operation - handles the sigusr1 that we are reciving in the start of the game
+ *             and lets the player to choose the first move
+ */
+void HandleSiguser1(int sig) {
+    int moved = 0;
+    char move[6];
+    struct Point *moveCoordinats;
+    PrintRequest();
+    scanf("%s", move);
+    moveCoordinats = ParseStruct(move);
+    //move was out of bound
+    if (moveCoordinats == NULL) {
+        PrintInvalidInputError();
+        //check if move is lega-if it's legal execute it
+    } else {
+        ExecuteMove(moveCoordinats, &moved, myBoardNumber, 1);
+    }
+
+    //if not legal move free Point struct and get move again
+    while (moved == 0) {
+        free(moveCoordinats);
+        PrintNoMoveInput();
+        PrintRequest();
+        scanf("%s", move);
+        moveCoordinats = ParseStruct(move);
+        //move was out of bound
+        if (moveCoordinats == NULL) {
+            PrintInvalidInputError();
+            //check if move is lega-if it's legal execute it
+        } else {
+            ExecuteMove(moveCoordinats, &moved, myBoardNumber, 1);
+        }
+    }
+    PrintBoard();
+    WriteToSharedMemory(moveCoordinats, myBoardNumber);
 }
 
 /**
