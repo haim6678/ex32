@@ -44,6 +44,8 @@ int gameBoard[ROW_SIZE][COL_SIZE];
 
 void RunGame(char *data);
 
+void HandleEnd(int winner);
+
 void ExecuteMoveOnBoard(struct Point loc);
 
 /**
@@ -138,12 +140,17 @@ int main() {
     //start following and managing the game
     RunGame(data);
 
-    //close the fifo
-    //delete the memory
+    //todo close the fifo
+    //todo delete the memory
 
     return 0;
 }
 
+/**
+ * input - pointer to shared memory
+ * output- the second player move
+ * operation - reads from memory
+ */
 struct Point ReadData(char *data) {
     int x;
     int y;
@@ -169,6 +176,10 @@ struct Point ReadData(char *data) {
     return p;
 }
 
+/**
+ * input - the location which the player put is piece
+ * operation- perform is move and update the board
+ */
 void ExecuteMoveOnBoard(struct Point loc) {
     ExecuteUp(&loc, loc.player);
     ExecuteDown(&loc, loc.player);
@@ -180,10 +191,14 @@ void ExecuteMoveOnBoard(struct Point loc) {
     ExecuteLeftAndDown(&loc, loc.player);
 }
 
+/**
+ * input - the pointer to the shared memory
+ * operation- runs the game,every time gets a move,update the board and checking
+ *            if the game need to end
+ */
 void RunGame(char *data) {
 
     int keepOn = KEEP_ON;
-    int number;
     struct Point loc;
     while (keepOn == KEEP_ON) {
 
@@ -206,8 +221,8 @@ void RunGame(char *data) {
  * input- get the point where thw player locate is new piece,a flag to update if we change
  *        something,and a flag to say what's my number on board
  * operation- checking if from the piece position to the right there is a legal move
- *            (that in the end there a second piece of my kind) if there is - update the
- *            move flag/
+ *            (that in the end there a second piece of my kind)
+ *
  */
 
 void ExecuteRight(struct Point *p, int myNumber) {
@@ -254,8 +269,7 @@ void ExecuteRight(struct Point *p, int myNumber) {
  * input- get the point where thw player locate is new piece,a flag to update if we change
  *        something,and a flag to say what's my number on board
  * operation- checking if from the piece position to the left there is a legal move
- *            (that in the end there a second piece of my kind) if there is - update the
- *            move flag/
+ *            (that in the end there a second piece of my kind)
  */
 void ExecuteLeft(struct Point *p, int myNumber) {
     int endX = -1;
@@ -299,8 +313,7 @@ void ExecuteLeft(struct Point *p, int myNumber) {
  * input- get the point where thw player locate is new piece,a flag to update if we change
  *        something,and a flag to say what's my number on board
  * operation- checking if from the piece position to upward there is a legal move
- *            (that in the end there a second piece of my kind) if there is - update the
- *            move flag/
+ *            (that in the end there a second piece of my kind)
  */
 void ExecuteUp(struct Point *p, int myNumber) {
     int endX = -1;
@@ -344,8 +357,7 @@ void ExecuteUp(struct Point *p, int myNumber) {
  * input- get the point where thw player locate is new piece,a flag to update if we change
  *        something,and a flag to say what's my number on board
  * operation- checking if from the piece position to down there is a legal move
- *            (that in the end there a second piece of my kind) if there is - update the
- *            move flag/
+ *            (that in the end there a second piece of my kind)
  */
 void ExecuteDown(struct Point *p, int myNumber) {
     int endX = -1;
@@ -389,8 +401,7 @@ void ExecuteDown(struct Point *p, int myNumber) {
  * input- get the point where thw player locate is new piece,a flag to update if we change
  *        something,and a flag to say what's my number on board
  * operation- checking if from the piece position to the left and up there is a legal move
- *            (that in the end there a second piece of my kind) if there is - update the
- *            move flag/
+ *            (that in the end there a second piece of my kind)
  */
 void ExecuteLeftAndUp(struct Point *p, int myNumber) {
     int endX = -1;
@@ -437,8 +448,7 @@ void ExecuteLeftAndUp(struct Point *p, int myNumber) {
  * input- get the point where thw player locate is new piece,a flag to update if we change
  *        something,and a flag to say what's my number on board
  * operation- checking if from the piece position to the left and down there is a legal move
- *            (that in the end there a second piece of my kind) if there is - update the
- *            move flag/
+ *            (that in the end there a second piece of my kind)
  */
 void ExecuteLeftAndDown(struct Point *p, int myNumber) {
     int endX = -1;
@@ -485,8 +495,7 @@ void ExecuteLeftAndDown(struct Point *p, int myNumber) {
  * input- get the point where thw player locate is new piece,a flag to update if we change
  *        something,and a flag to say what's my number on board
  * operation- checking if from the piece position to the right and up there is a legal move
- *            (that in the end there a second piece of my kind) if there is - update the
- *            move flag/
+ *            (that in the end there a second piece of my kind)
  */
 void ExecuteRightAndUp(struct Point *p, int myNumber) {
     int endX = -1;
@@ -533,8 +542,7 @@ void ExecuteRightAndUp(struct Point *p, int myNumber) {
  * input- get the point where thw player locate is new piece,a flag to update if we change
  *        something,and a flag to say what's my number on board
  * operation- checking if from the piece position to the right and down there is a legal move
- *            (that in the end there a second piece of my kind) if there is - update the
- *            move flag/
+ *            (that in the end there a second piece of my kind)
  */
 void ExecuteRightAndDown(struct Point *p, int myNumber) {
     int endX = -1;
