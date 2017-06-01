@@ -6,6 +6,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #define ROW_SIZE 8
 #define COL_SIZE 8
@@ -55,6 +56,8 @@ int main() {
         perror("shmat");
         exit(1);
     }
+
+
     //create fifo
     file = mkfifo("fifo_clientTOserver", 0666);
     if (file < 0) {
@@ -66,6 +69,8 @@ int main() {
         perror("Unable to open a fifo");
         exit(-1);
     }
+
+
     //get the pid's
     if (read(fd_read, &firstGivenPid, sizeof(pid_t)) < 0) {
         //todo handle
@@ -74,7 +79,76 @@ int main() {
         //todo handle
     }
     //close the fifo
-    close(fd_read);
-    printf("Hello, World!\n");
+    if (close(fd_read) < 0) {
+        perror("failed to close fifo");
+        exit(-1);
+    }
+
+    *data = '$';
+
+    //sending them the signal
+    if (kill(SIGUSR1, firstGivenPid) < 0) {
+        perror("failed to send sognal");
+        exit(-1);
+    }
+
+    while (*data == '$') {
+
+    }
+    //read the data
+
+    (*data++);
+    //execute it
+    if (kill(SIGUSR1, secondGivenPid) < 0) {
+        perror("failed to send sognal");
+        exit(-1);
+    }
+
+    RunGame(data);
+
+    //close the fifo
+    //delete the memory
+
     return 0;
 }
+
+void RunGame(char *data) {
+
+    int keepOn = 1;
+    while (keepOn == 1) {
+
+
+        while (*data == '$') {
+
+        }
+        //read the data
+
+        //execute it
+
+        /*
+ * ExecuteUp(struct Point loc,int number)
+ * ExecuteDown(struct Point loc,int number)
+ * ExecuteLeft(struct Point loc,int number)
+ * ExecuteRight(struct Point loc,int number)
+ * ExecuteUpAndRight(struct Point loc,int number)
+ * ExecuteUpAndLeft(struct Point loc,int number)
+ * ExecuteDownAndLeft(struct Point loc,int number)
+ *  ExecuteDownAndRight(struct Point loc,int number)
+ */
+
+        //check board status
+
+    }
+}
+
+/*
+ * void ExecuteUp(struct Point loc,int number)
+ * void ExecuteDown(struct Point loc,int number)
+ * void ExecuteLeft(struct Point loc,int number)
+ * void ExecuteRight(struct Point loc,int number)
+ * void ExecuteUpAndRight(struct Point loc,int number)
+ * void ExecuteUpAndLeft(struct Point loc,int number)
+ * void ExecuteDownAndLeft(struct Point loc,int number)
+ * void ExecuteDownAndRight(struct Point loc,int number)
+ * int CheckEnd()
+ */
