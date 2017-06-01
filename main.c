@@ -207,9 +207,11 @@ int CheckWinner(int flag) {
  */
 int CheckEnd() {
 
+
     int flag = 0;
     int i = 0;
     int j = 0;
+    //check the board
     for (i = 0; i < ROW_SIZE; i++) {
         for (j = 0; j < COL_SIZE; j++) {
             //if we found an empty space
@@ -229,6 +231,10 @@ int CheckEnd() {
     }
 }
 
+/**
+ * input- the number that indicate the winner
+ * operation- print the message and exit's
+ */
 void HandleEnd(int winner) {
     if (winner == 1) {
         //white win
@@ -252,6 +258,10 @@ void HandleEnd(int winner) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 
+/**
+ * input- my number on board
+ * operation- runs the game,get's input,check's it,execute move,wait for other player,etc.
+ */
 void StartPlaying(int myNumber) {
 
     //declare variables
@@ -270,7 +280,6 @@ void StartPlaying(int myNumber) {
         if ((check = CheckEnd()) != -1) {
             HandleEnd(check);
         }
-
         //get move from player
         moved = 0;
         PrintRequest();
@@ -330,7 +339,13 @@ void StartPlaying(int myNumber) {
 
 #pragma clang diagnostic pop
 
-//left means that i pressed on location left from me
+/**
+ * input- get the point where thw player locate is new piece,a flag to update if we change
+ *        something,and a flag to say what's my number on board
+ * operation- checking if from the piece position to the right there is a legal move
+ *            (that in the end there a second piece of my kind) if there is - update the
+ *            move flag/
+ */
 void CheckConvertToRight(struct Point *p, int *moveFlag, int myNumber) {
     int endX = -1;
     int endY = -1;
@@ -372,6 +387,13 @@ void CheckConvertToRight(struct Point *p, int *moveFlag, int myNumber) {
     }
 }
 
+/**
+ * input- get the point where thw player locate is new piece,a flag to update if we change
+ *        something,and a flag to say what's my number on board
+ * operation- checking if from the piece position to the left there is a legal move
+ *            (that in the end there a second piece of my kind) if there is - update the
+ *            move flag/
+ */
 void CheckConvertToLeft(struct Point *p, int *moveFlag, int myNumber) {
     int endX = -1;
     int endY = -1;
@@ -388,7 +410,7 @@ void CheckConvertToLeft(struct Point *p, int *moveFlag, int myNumber) {
         startY--;
         while ((endX == -1) && (endY == -1) && (startY >= 0)) {
 
-            //if there is'nt my piece in the other side from the right
+            //if there is'nt my piece in the other side from the left
             if (gameBoard[startX][startY] == 0) {
                 break;
             }
@@ -411,13 +433,19 @@ void CheckConvertToLeft(struct Point *p, int *moveFlag, int myNumber) {
     }
 }
 
-
+/**
+ * input- get the point where thw player locate is new piece,a flag to update if we change
+ *        something,and a flag to say what's my number on board
+ * operation- checking if from the piece position to upward there is a legal move
+ *            (that in the end there a second piece of my kind) if there is - update the
+ *            move flag/
+ */
 void CheckConvertToUp(struct Point *p, int *moveFlag, int myNumber) {
     int endX = -1;
     int endY = -1;
     int startX = p->x;
     int startY = p->y;
-    //check if left from the given move there is an empty space or my piece
+    //check if above from the given move there is an empty space or my piece
     if ((startX - 1 < 0) || (gameBoard[startX - 1][startY] == 0) ||
         (gameBoard[startX - 1][startY] == myNumber)) {
         return;
@@ -428,7 +456,7 @@ void CheckConvertToUp(struct Point *p, int *moveFlag, int myNumber) {
         startX--;
         while ((endX == -1) && (endY == -1) && (startX >= 0)) {
 
-            //if there is'nt my piece in the other side from the right
+            //if there is'nt my piece in the other side from the above
             if (gameBoard[startX][startY] == 0) {
                 break;
             }
@@ -451,12 +479,19 @@ void CheckConvertToUp(struct Point *p, int *moveFlag, int myNumber) {
     }
 }
 
+/**
+ * input- get the point where thw player locate is new piece,a flag to update if we change
+ *        something,and a flag to say what's my number on board
+ * operation- checking if from the piece position to down there is a legal move
+ *            (that in the end there a second piece of my kind) if there is - update the
+ *            move flag/
+ */
 void CheckConvertToDown(struct Point *p, int *moveFlag, int myNumber) {
     int endX = -1;
     int endY = -1;
     int startX = p->x;
     int startY = p->y;
-    //check if left from the given move there is an empty space or my piece
+    //check if below from the given move there is an empty space or my piece
     if ((startX + 1 >= ROW_SIZE) || (gameBoard[startX + 1][startY] == 0) ||
         (gameBoard[startX + 1][startY] == myNumber)) {
         return;
@@ -467,7 +502,7 @@ void CheckConvertToDown(struct Point *p, int *moveFlag, int myNumber) {
         startX++;
         while ((endX == -1) && (endY == -1) && (startX < ROW_SIZE)) {
 
-            //if there is'nt my piece in the other side from the right
+            //if there is'nt my piece in the other side from the bottom
             if (gameBoard[startX][startY] == 0) {
                 break;
             }
@@ -490,13 +525,19 @@ void CheckConvertToDown(struct Point *p, int *moveFlag, int myNumber) {
     }
 }
 
-
+/**
+ * input- get the point where thw player locate is new piece,a flag to update if we change
+ *        something,and a flag to say what's my number on board
+ * operation- checking if from the piece position to the left and up there is a legal move
+ *            (that in the end there a second piece of my kind) if there is - update the
+ *            move flag/
+ */
 void CheckConvertToLeftAndUp(struct Point *p, int *moveFlag, int myNumber) {
     int endX = -1;
     int endY = -1;
     int startX = p->x;
     int startY = p->y;
-    //check if left from the given move there is an empty space or my piece
+    //check if left and up from the given move there is an empty space or my piece
     if ((startY - 1 < 0) || (startX - 1 < 0) || (gameBoard[startX - 1][startY - 1] == 0) ||
         (gameBoard[startX - 1][startY - 1] == myNumber)) {
         return;
@@ -508,7 +549,7 @@ void CheckConvertToLeftAndUp(struct Point *p, int *moveFlag, int myNumber) {
         startY--;
         while ((endX == -1) && (endY == -1) && (startX >= 0) && (startY >= 0)) {
 
-            //if there is'nt my piece in the other side from the right
+            //if there is'nt my piece in the other side from the left and up
             if (gameBoard[startX][startY] == 0) {
                 break;
             }
@@ -533,13 +574,19 @@ void CheckConvertToLeftAndUp(struct Point *p, int *moveFlag, int myNumber) {
     }
 }
 
-
+/**
+ * input- get the point where thw player locate is new piece,a flag to update if we change
+ *        something,and a flag to say what's my number on board
+ * operation- checking if from the piece position to the left and down there is a legal move
+ *            (that in the end there a second piece of my kind) if there is - update the
+ *            move flag/
+ */
 void CheckConvertToLeftAndDown(struct Point *p, int *moveFlag, int myNumber) {
     int endX = -1;
     int endY = -1;
     int startX = p->x;
     int startY = p->y;
-    //check if left from the given move there is an empty space or my piece
+    //check if left and down from the given move there is an empty space or my piece
     if ((startY - 1 < 0) || (startX + 1 >= ROW_SIZE) || (gameBoard[startX + 1][startY - 1] == 0) ||
         (gameBoard[startX + 1][startY - 1] == myNumber)) {
         return;
@@ -551,7 +598,7 @@ void CheckConvertToLeftAndDown(struct Point *p, int *moveFlag, int myNumber) {
         startY--;
         while ((endX == -1) && (endY == -1) && (startX < ROW_SIZE) && (startY >= 0)) {
 
-            //if there is'nt my piece in the other side from the right
+            //if there is'nt my piece in the other side from the left and down
             if (gameBoard[startX][startY] == 0) {
                 break;
             }
@@ -576,13 +623,19 @@ void CheckConvertToLeftAndDown(struct Point *p, int *moveFlag, int myNumber) {
     }
 }
 
-
+/**
+ * input- get the point where thw player locate is new piece,a flag to update if we change
+ *        something,and a flag to say what's my number on board
+ * operation- checking if from the piece position to the right and up there is a legal move
+ *            (that in the end there a second piece of my kind) if there is - update the
+ *            move flag/
+ */
 void CheckConvertToRightAndUp(struct Point *p, int *moveFlag, int myNumber) {
     int endX = -1;
     int endY = -1;
     int startX = p->x;
     int startY = p->y;
-    //check if left from the given move there is an empty space or my piece
+    //check if right and up from the given move there is an empty space or my piece
     if ((startY + 1 >= COL_SIZE) || (startX - 1 < 0) || (gameBoard[startX - 1][startY + 1] == 0) ||
         (gameBoard[startX - 1][startY + 1] == myNumber)) {
         return;
@@ -594,7 +647,7 @@ void CheckConvertToRightAndUp(struct Point *p, int *moveFlag, int myNumber) {
         startY++;
         while ((endX == -1) && (endY == -1) && (startX >= 0) && (startY < COL_SIZE)) {
 
-            //if there is'nt my piece in the other side from the right
+            //if there is'nt my piece in the other side from the right and up
             if (gameBoard[startX][startY] == 0) {
                 break;
             }
@@ -619,13 +672,19 @@ void CheckConvertToRightAndUp(struct Point *p, int *moveFlag, int myNumber) {
     }
 }
 
-
+/**
+ * input- get the point where thw player locate is new piece,a flag to update if we change
+ *        something,and a flag to say what's my number on board
+ * operation- checking if from the piece position to the right and down there is a legal move
+ *            (that in the end there a second piece of my kind) if there is - update the
+ *            move flag/
+ */
 void CheckConvertToRightAndDown(struct Point *p, int *moveFlag, int myNumber) {
     int endX = -1;
     int endY = -1;
     int startX = p->x;
     int startY = p->y;
-    //check if left from the given move there is an empty space or my piece
+    //check if right and down from the given move there is an empty space or my piece
     if ((startY + 1 >= COL_SIZE) || (startX + 1 >= ROW_SIZE) | (gameBoard[startX + 1][startY + 1] == 0) ||
         (gameBoard[startX + 1][startY + 1] == myNumber)) {
         return;
@@ -637,7 +696,7 @@ void CheckConvertToRightAndDown(struct Point *p, int *moveFlag, int myNumber) {
         startY++;
         while ((endX == -1) && (endY == -1) && (startX < ROW_SIZE) && (startY < COL_SIZE)) {
 
-            //if there is'nt my piece in the other side from the right
+            //if there is'nt my piece in the other side from the right and down
             if (gameBoard[startX][startY] == 0) {
                 break;
             }
@@ -662,6 +721,9 @@ void CheckConvertToRightAndDown(struct Point *p, int *moveFlag, int myNumber) {
     }
 }
 
+/**
+ * operation - print's the current game board on screen
+ */
 void PrintBoard() {
 
     if (write(STDOUT_FILENO, "The board is: \n", strlen("The board is: \n")) < 0) {
