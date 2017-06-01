@@ -21,18 +21,34 @@ struct Point {
 };
 
 int CheckEnd();
-struct Point ReadData(char* data);
-void ExecuteUp(struct Point*loc,int number);
-void ExecuteDown(struct Point* loc,int number);
-void ExecuteLeft(struct Point* loc,int number);
-void ExecuteRight(struct Point* loc,int number);
-void ExecuteRightAndUp(struct Point* loc,int number);
-void ExecuteRightAndDown(struct Point* loc,int number);
-void ExecuteLeftAndUp(struct Point* loc,int number);
-void ExecuteLeftAndDown(struct Point* loc,int number);
+
+struct Point ReadData(char *data);
+
+void ExecuteUp(struct Point *loc, int number);
+
+void ExecuteDown(struct Point *loc, int number);
+
+void ExecuteLeft(struct Point *loc, int number);
+
+void ExecuteRight(struct Point *loc, int number);
+
+void ExecuteRightAndUp(struct Point *loc, int number);
+
+void ExecuteRightAndDown(struct Point *loc, int number);
+
+void ExecuteLeftAndUp(struct Point *loc, int number);
+
+void ExecuteLeftAndDown(struct Point *loc, int number);
 
 int gameBoard[ROW_SIZE][COL_SIZE];
 
+void RunGame(char *data);
+
+void ExecuteMoveOnBoard(struct Point loc);
+
+/**
+ * operation- the main function
+ */
 int main() {
 
     key_t key;
@@ -42,6 +58,7 @@ int main() {
     int fd_read;
     pid_t firstGivenPid;
     pid_t secondGivenPid;
+    struct Point loc;
     //set the board
     memset(gameBoard, 0, sizeof(char) * ROW_SIZE * COL_SIZE);
     //initial the game with the black and white cells.
@@ -104,18 +121,21 @@ int main() {
         exit(-1);
     }
 
+    //wait for first player to make a move
     while (*data == '$') {
-
+        sleep(1); //todo need sleep here
     }
-    //read the data
-
-    (*data++);
+    //read the move
+    loc = ReadData(data);
     //execute it
+    ExecuteMoveOnBoard(loc);
+    //send to other player a signal to start play
     if (kill(SIGUSR1, secondGivenPid) < 0) {
-        perror("failed to send sognal");
+        perror("failed to send signal");
         exit(-1);
     }
 
+    //start following and managing the game
     RunGame(data);
 
     //close the fifo
@@ -124,7 +144,7 @@ int main() {
     return 0;
 }
 
-struct Point ReadData(char* data){
+struct Point ReadData(char *data) {
     int x;
     int y;
     char temp;
@@ -135,11 +155,10 @@ struct Point ReadData(char* data){
     y = (*data) + 48;
     (*data++);
     temp = *data;
-
-    if(temp == 'b'){
-        player =2;
-    } else if(temp =='w'){
-        player =1;
+    if (temp == 'b') {
+        player = 2;
+    } else if (temp == 'w') {
+        player = 1;
     }
     (*data++);
     (*data++);
@@ -149,6 +168,18 @@ struct Point ReadData(char* data){
     p.player = player;
     return p;
 }
+
+void ExecuteMoveOnBoard(struct Point loc) {
+    ExecuteUp(&loc, loc.player);
+    ExecuteDown(&loc, loc.player);
+    ExecuteLeft(&loc, loc.player);
+    ExecuteRight(&loc, loc.player);
+    ExecuteRightAndUp(&loc, loc.player);
+    ExecuteRightAndDown(&loc, loc.player);
+    ExecuteLeftAndUp(&loc, loc.player);
+    ExecuteLeftAndDown(&loc, loc.player);
+}
+
 void RunGame(char *data) {
 
     int keepOn = KEEP_ON;
@@ -156,26 +187,13 @@ void RunGame(char *data) {
     struct Point loc;
     while (keepOn == KEEP_ON) {
 
-
         while (*data == '$') {
             sleep(1); //todo need this?
         }
         //read the data
-
+        loc = ReadData(data);
         //execute it
-
-
-        ExecuteUp(&loc, number);
-        ExecuteDown(&loc, number);
-        ExecuteLeft(&loc, number);
-        ExecuteRight(&loc, number);
-        ExecuteRightAndUp(&loc, number);
-        ExecuteRightAndDown(&loc, number);
-        ExecuteLeftAndUp(&loc, number);
-        ExecuteLeftAndDown(&loc, number);
-
-
-
+        ExecuteMoveOnBoard(loc);
         //check board status
         keepOn = CheckEnd();
     }
