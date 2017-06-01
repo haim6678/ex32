@@ -338,29 +338,6 @@ int CheckEnd() {
     }
 }
 
-/**
- * input- the number that indicate the winner
- * operation- print the message and exit's
- */
-void HandleEnd(int winner) {
-    if (winner == 1) {
-        //white win
-        if (write(STDOUT_FILENO, "Winning player: White", strlen("Winning player: White")) < 0) {
-            perror("failed to write to screen");
-        }
-    } else if (winner == 2) {
-        //black win
-        if (write(STDOUT_FILENO, "Winning player: Black", strlen("Winning player: Black")) < 0) {
-            perror("failed to write to screen");
-        }
-    } else if (winner == 3) {
-        //they are even
-        if (write(STDOUT_FILENO, "No winning player", strlen("No winning player")) < 0) {
-            perror("failed to write to screen");
-        }
-    }
-    ReleaseMemoryEndExit();
-}
 
 void HandleSecondPlayer(char *data) {
     struct Point p;
