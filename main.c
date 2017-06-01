@@ -106,9 +106,9 @@ int main() {
     if (read(fd_read, &firstGivenPid, sizeof(pid_t)) < 0) {
         //todo handle
     }
-    if (read(fd_read, &secondGivenPid, sizeof(pid_t)) < 0) {
+    /*if (read(fd_read, &secondGivenPid, sizeof(pid_t)) < 0) {
         //todo handle
-    }
+    }*/
     //close the fifo
     if (close(fd_read) < 0) {
         perror("failed to close fifo");
