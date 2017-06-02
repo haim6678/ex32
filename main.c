@@ -58,8 +58,8 @@ int main() {
     char *data;
     int file;
     int fd_read;
-    pid_t firstGivenPid;
-    pid_t secondGivenPid;
+    pid_t firstGivenPid = 0;
+    pid_t secondGivenPid = 0;
     struct Point loc;
     //set the board
     memset(gameBoard, 0, sizeof(char) * ROW_SIZE * COL_SIZE);
@@ -96,19 +96,19 @@ int main() {
         exit(-1);
     }
     //open fifo
-    if ((fd_read = open("fifo_clientTOserver", O_RDONLY)) < 0) {
+    if ((fd_read = open("fifo_clientTOserver", O_RDWR)) < 0) {
         perror("Unable to open a fifo");
         exit(-1);
     }
-
 
     //get the pid's
     if (read(fd_read, &firstGivenPid, sizeof(pid_t)) < 0) {
         //todo handle
     }
-    /*if (read(fd_read, &secondGivenPid, sizeof(pid_t)) < 0) {
+
+    if (read(fd_read, &secondGivenPid, sizeof(pid_t)) < 0) {
         //todo handle
-    }*/
+    }
     //close the fifo
     if (close(fd_read) < 0) {
         perror("failed to close fifo");
@@ -118,8 +118,8 @@ int main() {
     *data = '$';
 
     //sending them the signal
-    if (kill(SIGUSR1, firstGivenPid) < 0) {
-        perror("failed to send sognal");
+    if (kill(firstGivenPid,SIGUSR1) < 0) {
+        perror("failed to send signal");
         exit(-1);
     }
 
@@ -132,7 +132,7 @@ int main() {
     //execute it
     ExecuteMoveOnBoard(loc);
     //send to other player a signal to start play
-    if (kill(SIGUSR1, secondGivenPid) < 0) {
+    if (kill(secondGivenPid,SIGUSR1) < 0) {
         perror("failed to send signal");
         exit(-1);
     }
@@ -157,16 +157,16 @@ struct Point ReadData(char *data) {
     char temp;
     int player;
 
-    x = (*data) + 48;
-    (*data++);
-    y = (*data) + 48;
-    (*data++);
     temp = *data;
     if (temp == 'b') {
         player = 2;
     } else if (temp == 'w') {
         player = 1;
     }
+    (*data++);
+    x = (*data) - 48;
+    (*data++);
+    y = (*data) - 48;
     (*data++);
     (*data++);
     struct Point p;
@@ -189,6 +189,7 @@ void ExecuteMoveOnBoard(struct Point loc) {
     ExecuteRightAndDown(&loc, loc.player);
     ExecuteLeftAndUp(&loc, loc.player);
     ExecuteLeftAndDown(&loc, loc.player);
+    PrintBoard();
 }
 
 /**
@@ -677,3 +678,50 @@ int CheckEnd() {
         return CheckWinner(0);
     }
 }
+
+/**
+ * operation - print's the current game board on screen
+ */
+void PrintBoard() {
+
+    if (write(STDOUT_FILENO, "The board is: \n", strlen("The board is: \n")) < 0) {
+        perror("failed to write to screen");
+    }
+    int i = 0;
+    char temp[32];
+    //run in loop and print
+    for (i; i < ROW_SIZE; i++) {
+
+        int j = 0;
+        for (j; j < COL_SIZE; j++) {
+            if ((gameBoard[i][j]) > 0) {
+                memset(temp, 32, 0);
+                sprintf(temp, "%01d", gameBoard[i][j]);
+                if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
+                    perror("failed to write to file");
+                    exit(-1);
+                }
+            } else {
+                memset(temp, 32, 0);
+                sprintf(temp, "%01d", gameBoard[i][j]);
+                if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
+                    perror("failed to write to file");
+                    exit(-1);
+                }
+            }
+            if (write(STDOUT_FILENO, " ", strlen(" ")) < 0) {
+                perror("failed to write to file");
+                exit(-1);
+            }
+        }
+        if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
+            perror("failed to write to file");
+            exit(-1);
+        }
+    }
+    if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
+        perror("failed to write to file");
+        exit(-1);
+    }
+}
+

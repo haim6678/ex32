@@ -58,7 +58,7 @@ struct Point *ParseStruct(char *move);
 
 void HandleSiguser1(int sig);
 
-void HandleSecondPlayer(char* data);
+void HandleSecondPlayer(char *data);
 
 char *memory;
 int myBoardNumber;
@@ -94,16 +94,19 @@ int main() {
         exit(-1);
     }
     //open fifo
-    if ((fd_write = open("fifo_clientTOserver", O_WRONLY)) < 0) {
+    if ((fd_write = open("fifo_clientTOserver", O_RDWR)) < 0) {
         write(STDERR_FILENO, "failed to open fifo", strlen("failed to open fifo"));
         exit(-1);
     }
     //write to it my pid
+
     myPid = getpid();
     if (write(fd_write, &myPid, sizeof(pid_t)) < 0) {
         perror("failed to write to fifo");
         exit(-1);
     }
+    pause();
+
     return 0;
 }
 
@@ -116,7 +119,7 @@ struct Point ReadFromMemory(char *data) {
 
     int x;
     int y;
-    while (*data == '$') {
+    while (*memory == '$') {
         if (write(STDOUT_FILENO, "Waiting for to other player to make a move \n",
                   strlen("\"Waiting for to other player to make a move \n")) < 0) {
             perror("failed to write to screen");
@@ -125,12 +128,12 @@ struct Point ReadFromMemory(char *data) {
         sleep(1);
     }
 
-    x = (*data) + 48;
-    (*data++);
-    y = (*data) + 48;
-    (*data++);
-    (*data++);
-    (*data++);
+    (*memory++);
+    x = (*memory) - 48;
+    (*memory++);
+    y = (*memory) - 48;
+    (*memory++);
+    (*memory++);
     struct Point p;
     p.y = y;
     p.x = x;
@@ -156,7 +159,7 @@ void WriteToSharedMemory(struct Point *p, int myNumber) {
     *memory++ = x;
     *memory++ = y;
     *memory++ = '\0';
-    *memory++ = '$';
+    *memory = '$';
 }
 
 /**
@@ -262,7 +265,7 @@ void ReleaseMemoryEndExit() {
  * operation - print's requast the enter new position
  */
 void PrintRequest() {
-    if (write(STDOUT_FILENO, "Please choose a square", strlen("Please choose a square")) < 0) {
+    if (write(STDOUT_FILENO, "Please choose a square \n", strlen("Please choose a square \n")) < 0) {
         perror("failed to write to screen");
         ReleaseMemoryEndExit();
     }
@@ -346,10 +349,12 @@ void HandleSecondPlayer(char *data) {
     char move[6];
     struct Point *moveCoordinats;
     int myNumber = 1;
+    PrintBoard();
     //read move
     p = ReadFromMemory(data);
     //execute other player move
-    ExecuteMove(&p, &i, 1, 0);
+    ExecuteMove(&p, &i, 2, 0);
+    PrintBoard();
     //get your your move
     moved = 0;
     PrintRequest();
@@ -424,6 +429,7 @@ void StartPlaying() {
 
     /* attach to the segment to get a pointer to it: */
     data = shmat(shmid, NULL, 0);
+    memory = data;
     if (data == (char *) (-1)) {
         perror("shmat");
         exit(1);
