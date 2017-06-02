@@ -119,12 +119,13 @@ struct Point ReadFromMemory(char *data) {
 
     int x;
     int y;
+    if (write(STDOUT_FILENO, "Waiting for to other player to make a move \n",
+              strlen("\"Waiting for to other player to make a move \n")) < 0) {
+        perror("failed to write to screen");
+        ReleaseMemoryEndExit();
+    }
     while (*memory == '$') {
-        if (write(STDOUT_FILENO, "Waiting for to other player to make a move \n",
-                  strlen("\"Waiting for to other player to make a move \n")) < 0) {
-            perror("failed to write to screen");
-            ReleaseMemoryEndExit();
-        }
+
         sleep(1);
     }
 
@@ -235,8 +236,8 @@ void ExecuteMove(struct Point *p, int *moveFlag, int number, int myTurn) {
  * operation - print's that the input was wrong
  */
 void PrintInvalidInputError() {
-    if (write(STDOUT_FILENO, "No such square \n Please choose another square",
-              strlen("No such square \n Please choose another square")) < 0) {
+    if (write(STDOUT_FILENO, "No such square \n Please choose another square \n",
+              strlen("No such square \n Please choose another square \n")) < 0) {
         perror("failed to write to screen");
         ReleaseMemoryEndExit();
     }
@@ -246,8 +247,8 @@ void PrintInvalidInputError() {
  * operation - print's that the input is not good because there is no move
  */
 void PrintNoMoveInput() {
-    if (write(STDOUT_FILENO, "This square is invalid \n Please choose another square",
-              strlen("This square is invalid \n Please choose another square")) < 0) {
+    if (write(STDOUT_FILENO, "This square is invalid \n Please choose another square \n",
+              strlen("This square is invalid \n Please choose another square \n")) < 0) {
         perror("failed to write to screen");
         ReleaseMemoryEndExit();
     }
@@ -349,7 +350,6 @@ void HandleSecondPlayer(char *data) {
     char move[6];
     struct Point *moveCoordinats;
     int myNumber = 1;
-    PrintBoard();
     //read move
     p = ReadFromMemory(data);
     //execute other player move
@@ -358,6 +358,7 @@ void HandleSecondPlayer(char *data) {
     //get your your move
     moved = 0;
     PrintRequest();
+
     scanf("%s", move);
     moveCoordinats = ParseStruct(move);
     //move was out of bound
@@ -443,6 +444,7 @@ void StartPlaying() {
         //wait for the second player move
         otherPlayerMove = ReadFromMemory(data);
         ExecuteMove(&otherPlayerMove, &moved, 2, 0);
+        PrintBoard();
     }
     int myNumber = myBoardNumber;
     //declare variables
@@ -454,6 +456,7 @@ void StartPlaying() {
 
         //get move from player
         moved = 0;
+        printf("your number is %d",myNumber); //todo remove this
         PrintRequest();
         scanf("%s", move);
         moveCoordinats = ParseStruct(move);
@@ -463,14 +466,14 @@ void StartPlaying() {
             //check if move is lega-if it's legal execute it
         } else {
             ExecuteMove(moveCoordinats, &moved, myNumber, 1);
-
+            if(move == 0){
+                PrintNoMoveInput();
+            }
         }
 
         //if not legal move free Point struct and get move again
         while (moved == 0) {
             free(moveCoordinats);
-            PrintNoMoveInput();
-            PrintRequest();
             scanf("%s", move);
             moveCoordinats = ParseStruct(move);
             //move was out of bound
@@ -479,6 +482,9 @@ void StartPlaying() {
                 //check if move is lega-if it's legal execute it
             } else {
                 ExecuteMove(moveCoordinats, &moved, myNumber, 1);
+                if(move == 0){
+                    PrintNoMoveInput();
+                }
             }
         }
         //move was legal and we after executing the move
