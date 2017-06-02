@@ -47,7 +47,7 @@ void RunGame(char *data);
 void HandleEnd(int winner);
 
 void ExecuteMoveOnBoard(struct Point loc);
-
+char* memory;
 /**
  * operation- the main function
  */
@@ -87,6 +87,7 @@ int main() {
         perror("shmat");
         exit(1);
     }
+    memory = data;
 
 
     //create fifo
@@ -115,7 +116,7 @@ int main() {
         exit(-1);
     }
 
-    *data = '$';
+    *memory = '$';
 
     //sending them the signal
     if (kill(firstGivenPid,SIGUSR1) < 0) {
@@ -124,7 +125,7 @@ int main() {
     }
 
     //wait for first player to make a move
-    while (*data == '$') {
+    while (*memory == '$') {
         sleep(1); //todo need sleep here
     }
     //read the move
@@ -147,7 +148,7 @@ int main() {
 }
 
 /**
- * input - pointer to shared memory
+ * input - pointer tobuild structure shared memory
  * output- the second player move
  * operation - reads from memory
  */
@@ -157,18 +158,18 @@ struct Point ReadData(char *data) {
     char temp;
     int player;
 
-    temp = *data;
+    temp = *memory;
     if (temp == 'b') {
         player = 2;
     } else if (temp == 'w') {
         player = 1;
     }
-    (*data++);
-    x = (*data) - 48;
-    (*data++);
-    y = (*data) - 48;
-    (*data++);
-    (*data++);
+    (*memory++);
+    x = (*memory) - 48;
+    (*memory++);
+    y = (*memory) - 48;
+    (*memory++);
+    (*memory++);
     struct Point p;
     p.y = y;
     p.x = x;
@@ -203,7 +204,7 @@ void RunGame(char *data) {
     struct Point loc;
     while (keepOn == KEEP_ON) {
 
-        while (*data == '$') {
+        while (*memory == '$') {
             sleep(1); //todo need this?
         }
         //read the data

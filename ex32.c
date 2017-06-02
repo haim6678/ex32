@@ -439,8 +439,11 @@ void StartPlaying() {
     } else {
         myBoardNumber = 1;
         HandleSecondPlayer(data);
-    }
 
+        //wait for the second player move
+        otherPlayerMove = ReadFromMemory(data);
+        ExecuteMove(&otherPlayerMove, &moved, 2, 0);
+    }
     int myNumber = myBoardNumber;
     //declare variables
     otherPlayerNumber = 3 - myNumber;
@@ -460,6 +463,7 @@ void StartPlaying() {
             //check if move is lega-if it's legal execute it
         } else {
             ExecuteMove(moveCoordinats, &moved, myNumber, 1);
+
         }
 
         //if not legal move free Point struct and get move again
@@ -488,6 +492,7 @@ void StartPlaying() {
         //wait for the second player move
         otherPlayerMove = ReadFromMemory(data);
         ExecuteMove(&otherPlayerMove, &moved, otherPlayerNumber, 0);
+        PrintBoard();
     }
 }
 
