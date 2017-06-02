@@ -20,6 +20,7 @@ struct Point {
     int player;
 };
 
+//declare the functions
 int CheckEnd();
 
 struct Point ReadData(char *data);
@@ -52,7 +53,9 @@ char* memory;
  * operation- the main function
  */
 int main() {
-
+    //todo why need ex31.c in the directory
+    //todo why need to delete the fifo file every time
+    //toto release resourses
     key_t key;
     int shmid;
     char *data;
@@ -190,7 +193,6 @@ void ExecuteMoveOnBoard(struct Point loc) {
     ExecuteRightAndDown(&loc, loc.player);
     ExecuteLeftAndUp(&loc, loc.player);
     ExecuteLeftAndDown(&loc, loc.player);
-    PrintBoard();
 }
 
 /**
@@ -677,52 +679,6 @@ int CheckEnd() {
         //it's  -1 ->we found an empty space then keep playing and check if left a move
     } else {
         return CheckWinner(0);
-    }
-}
-
-/**
- * operation - print's the current game board on screen
- */
-void PrintBoard() {
-
-    if (write(STDOUT_FILENO, "The board is: \n", strlen("The board is: \n")) < 0) {
-        perror("failed to write to screen");
-    }
-    int i = 0;
-    char temp[32];
-    //run in loop and print
-    for (i; i < ROW_SIZE; i++) {
-
-        int j = 0;
-        for (j; j < COL_SIZE; j++) {
-            if ((gameBoard[i][j]) > 0) {
-                memset(temp, 32, 0);
-                sprintf(temp, "%01d", gameBoard[i][j]);
-                if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
-                    perror("failed to write to file");
-                    exit(-1);
-                }
-            } else {
-                memset(temp, 32, 0);
-                sprintf(temp, "%01d", gameBoard[i][j]);
-                if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
-                    perror("failed to write to file");
-                    exit(-1);
-                }
-            }
-            if (write(STDOUT_FILENO, " ", strlen(" ")) < 0) {
-                perror("failed to write to file");
-                exit(-1);
-            }
-        }
-        if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
-            perror("failed to write to file");
-            exit(-1);
-        }
-    }
-    if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
-        perror("failed to write to file");
-        exit(-1);
     }
 }
 
