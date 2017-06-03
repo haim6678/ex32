@@ -48,7 +48,9 @@ void RunGame(char *data);
 void HandleEnd(int winner);
 
 void ExecuteMoveOnBoard(struct Point loc);
-char* memory;
+
+char *memory;
+
 /**
  * operation- the main function
  */
@@ -120,9 +122,8 @@ int main() {
     }
 
     *memory = '$';
-
     //sending them the signal
-    if (kill(firstGivenPid,SIGUSR1) < 0) {
+    if (kill(firstGivenPid, SIGUSR1) < 0) {
         perror("failed to send signal");
         exit(-1);
     }
@@ -136,7 +137,7 @@ int main() {
     //execute it
     ExecuteMoveOnBoard(loc);
     //send to other player a signal to start play
-    if (kill(secondGivenPid,SIGUSR1) < 0) {
+    if (kill(secondGivenPid, SIGUSR1) < 0) {
         perror("failed to send signal");
         exit(-1);
     }
@@ -594,6 +595,10 @@ void ExecuteRightAndDown(struct Point *p, int myNumber) {
  * operation- print the message and exit's
  */
 void HandleEnd(int winner) {
+    //print game over and the winner
+    if (write(STDOUT_FILENO, "GAME OVER", strlen("GAME OVER")) < 0) {
+        perror("failed to write to screen");
+    }
     if (winner == 1) {
         //white win
         if (write(STDOUT_FILENO, "Winning player: White", strlen("Winning player: White")) < 0) {

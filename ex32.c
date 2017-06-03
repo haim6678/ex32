@@ -24,6 +24,8 @@ void PrintNoMoveInput();
 
 void PrintRequest();
 
+struct Point *GetUserInput();
+
 void PrintInvalidInputError();
 
 void ReleaseMemoryEndExit();
@@ -291,15 +293,14 @@ void HandleSecondPlayer(char *data) {
     moved = 0;
     PrintRequest();
 
-    scanf("%s", move);
-    moveCoordinats = ParseStruct(move);
+    moveCoordinats = GetUserInput();
     //move was out of bound
     if (moveCoordinats == NULL) {
         PrintInvalidInputError();
         //check if move is lega-if it's legal execute it
     } else {
         ExecuteMove(moveCoordinats, &moved, myNumber, 1);
-        if(moved == 0){
+        if (moved == 0) {
             PrintNoMoveInput();
         }
     }
@@ -307,16 +308,14 @@ void HandleSecondPlayer(char *data) {
     //if not legal move free Point struct and get move again
     while (moved == 0) {
         free(moveCoordinats);
-
-        scanf("%s", move);
-        moveCoordinats = ParseStruct(move);
+        moveCoordinats = GetUserInput();
         //move was out of bound
         if (moveCoordinats == NULL) {
             PrintInvalidInputError();
             //check if move is lega-if it's legal execute it
         } else {
             ExecuteMove(moveCoordinats, &moved, myNumber, 1);
-            if(moved == 0){
+            if (moved == 0) {
                 PrintNoMoveInput();
             }
         }
@@ -348,10 +347,7 @@ void StartPlaying() {
     char *data;
     char move[6];
     int moved;
-    int x;
-    int y;
     int otherPlayerNumber;
-    int check;
     struct Point otherPlayerMove;
     /* make the key: */
     if ((key = ftok("ex31.c", 'k')) == -1) {
@@ -390,29 +386,25 @@ void StartPlaying() {
 
     //start the game
     while (1) {
-
         //get move from player
         moved = 0;
-        printf("your number is %d \n", myNumber); //todo remove this
+        printf("your number is %d\n", myNumber); //todo remove this
         PrintRequest();
-        scanf("%s", move);
-        moveCoordinats = ParseStruct(move);
+        moveCoordinats = GetUserInput();
         //move was out of bound
         if (moveCoordinats == NULL) {
             PrintInvalidInputError();
-            //check if move is lega-if it's legal execute it
         } else {
+            //check if move is lega-if it's legal execute it
             ExecuteMove(moveCoordinats, &moved, myNumber, 1);
             if (moved == 0) {
                 PrintNoMoveInput();
             }
         }
-
         //if not legal move free Point struct and get move again
         while (moved == 0) {
             free(moveCoordinats);
-            scanf("%s", move);
-            moveCoordinats = ParseStruct(move);
+            moveCoordinats = GetUserInput();
             //move was out of bound
             if (moveCoordinats == NULL) {
                 PrintInvalidInputError();
@@ -425,13 +417,11 @@ void StartPlaying() {
             }
         }
         //move was legal and we after executing the move
-
         //print new board
         PrintBoard();
-
+        //write to memory
         WriteToSharedMemory(moveCoordinats, myNumber);
         free(moveCoordinats);
-
         //wait for the second player move
         otherPlayerMove = ReadFromMemory(data);
         ExecuteMove(&otherPlayerMove, &moved, otherPlayerNumber, 0);
@@ -441,6 +431,35 @@ void StartPlaying() {
 
 
 #pragma clang diagnostic pop
+
+struct Point *GetUserInput() {
+    int input;
+    char tempInput;
+    char move[6];
+    input = 0;
+    memset(move, '\0', 6);
+    while (1) {
+        if (read(STDIN_FILENO, &tempInput, 1) < 0) {
+            perror("failed to read from stdin");
+            //todo release memory and exit
+        }
+        if (tempInput == '\n') {
+            break;
+        } else {
+            move[input] = tempInput;
+            input++;
+        }
+        if (input > 5) {
+            if (fseek(stdin, 0, SEEK_END) < 0) {
+                perror("failed fseek");
+                //todo exit?
+            }
+            return NULL;
+        }
+    };
+
+    return ParseStruct(move);
+}
 
 /**
  * input- get the point where thw player locate is new piece,a flag to update if we change
