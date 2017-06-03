@@ -84,7 +84,7 @@ int main() {
     //define the signal handler
     struct sigaction sigUsrAction;
     sigset_t sigUsrBlock;
-    sigfillset(&sigUsrBlock);
+    sigemptyset(&sigUsrBlock);
     //set the handling function for siusr1
     sigUsrAction.sa_handler = HandleSiguser1;
     sigUsrAction.sa_mask = sigUsrBlock;
@@ -105,11 +105,13 @@ int main() {
     myPid = getpid();
     if (write(fd_write, &myPid, sizeof(pid_t)) < 0) {
         perror("failed to write to fifo");
+        //todo release file and exit
         exit(-1);
     }
     if (close(fd_write) < 0) {
         perror("failed to close fifo");
         exit(-1);
+        //todo need to unlink?
     }
     //wait for the signal
     pause();
@@ -132,7 +134,6 @@ struct Point ReadFromMemory(char *data) {
         ReleaseMemoryEndExit();
     }
     while (*memory == '$') {
-
         sleep(1);
     }
     //read the data from memory
@@ -198,7 +199,7 @@ struct Point *ParseStruct(char *move) {
     x = temp[1] - 48;
     temp = strtok(NULL, ",");
     //more then 1 digit entered
-    if (strlen(temp) > 2) {
+    if ((temp == NULL) || (strlen(temp) > 2)) {
         return NULL;
     }
     y = temp[0] - 48;
@@ -282,11 +283,16 @@ void PrintRequest() {
     }
 }
 
+/**
+ * input - the pointer to shared data
+ * operation - if i em the second player to enter the gam
+ *             this function will handle my first input.
+ */
 void HandleSecondPlayer(char *data) {
     struct Point p;
     int i = 0;
     int moved = 0;
-    char move[6];
+
     struct Point *moveCoordinats;
     int myNumber = 1;
     //read move
@@ -297,7 +303,6 @@ void HandleSecondPlayer(char *data) {
     //get your your move
     moved = 0;
     PrintRequest();
-
     moveCoordinats = GetUserInput();
     //move was out of bound
     if (moveCoordinats == NULL) {
@@ -326,10 +331,8 @@ void HandleSecondPlayer(char *data) {
         }
     }
 
-
     //write it down to memory
     PrintBoard();
-
     WriteToSharedMemory(moveCoordinats, myNumber);
     free(moveCoordinats);
     //return to normal play
@@ -350,7 +353,6 @@ void StartPlaying() {
     key_t key;
     int shmid;
     char *data;
-    char move[6];
     int moved;
     int otherPlayerNumber;
     struct Point otherPlayerMove;
@@ -436,6 +438,10 @@ void StartPlaying() {
 
 #pragma clang diagnostic pop
 
+/**
+ * output- the point given by the user
+ * operation - in charge of getting the user input
+ */
 struct Point *GetUserInput() {
     int input;
     char tempInput;
@@ -445,7 +451,7 @@ struct Point *GetUserInput() {
     while (1) {
         if (read(STDIN_FILENO, &tempInput, 1) < 0) {
             perror("failed to read from stdin");
-            //todo release memory and exit
+            ReleaseMemoryEndExit();
         }
         if (tempInput == '\n') {
             break;
@@ -458,7 +464,7 @@ struct Point *GetUserInput() {
             return NULL;
         }
     };
-
+    //parse the point from the user
     return ParseStruct(move);
 }
 
@@ -865,29 +871,29 @@ void PrintBoard() {
                 sprintf(temp, "%01d", gameBoard[i][j]);
                 if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
                     perror("failed to write to file");
-                    exit(-1);
+                    ReleaseMemoryEndExit();
                 }
             } else {
                 memset(temp, 32, 0);
                 sprintf(temp, "%01d", gameBoard[i][j]);
                 if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
                     perror("failed to write to file");
-                    exit(-1);
+                    ReleaseMemoryEndExit();
                 }
             }
             if (write(STDOUT_FILENO, " ", strlen(" ")) < 0) {
                 perror("failed to write to file");
-                exit(-1);
+                ReleaseMemoryEndExit();
             }
         }
         if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
             perror("failed to write to file");
-            exit(-1);
+            ReleaseMemoryEndExit();
         }
     }
     if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
         perror("failed to write to file");
-        exit(-1);
+        ReleaseMemoryEndExit();
     }
 }
 

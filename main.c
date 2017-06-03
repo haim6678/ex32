@@ -59,9 +59,10 @@ void RealeseResoursecAndExit(int shmid);
 int main() {
     //todo why need ex31.c in the directory
     //todo why need to delete the fifo file every time
-    //todo different between shmdt and shmctl
+    //todo different between shmdt and shmctl and if there is do i need both?
     //todo if i delete here do i need to delete in ex32 the memory?
     //todo if i open here and in client the fifo file do i need 2 unlink? in a normal file an in fifo is there a different?
+
     key_t key;
     int shmid;
     char *data;
@@ -101,11 +102,21 @@ int main() {
     file = mkfifo("fifo_clientTOserver", 0666);
     if (file < 0) {
         perror("Unable to create a fifo");
+        /* remove the memory: */
+        if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+            perror("shmctl");
+            exit(1);
+        }
         exit(-1);
     }
     //open fifo
     if ((fd_read = open("fifo_clientTOserver", O_RDWR)) < 0) {
         perror("Unable to open a fifo");
+        /* remove the memory: */
+        if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+            perror("shmctl");
+            exit(1);
+        }
         exit(-1);
     }
 
@@ -130,7 +141,6 @@ int main() {
         perror("failed to close fifo");
         RealeseResoursecAndExit(shmid);
     }
-
     *memory = '$';
     //sending them the signal
     if (kill(firstGivenPid, SIGUSR1) < 0) {
