@@ -51,13 +51,17 @@ void ExecuteMoveOnBoard(struct Point loc);
 
 char *memory;
 
+void RealeseResoursecAndExit(int shmid);
+
 /**
  * operation- the main function
  */
 int main() {
     //todo why need ex31.c in the directory
     //todo why need to delete the fifo file every time
-    //toto release resourses
+    //todo different between shmdt and shmctl
+    //todo if i delete here do i need to delete in ex32 the memory?
+    //todo if i open here and in client the fifo file do i need 2 unlink? in a normal file an in fifo is there a different?
     key_t key;
     int shmid;
     char *data;
@@ -93,8 +97,6 @@ int main() {
         exit(1);
     }
     memory = data;
-
-
     //create fifo
     file = mkfifo("fifo_clientTOserver", 0666);
     if (file < 0) {
@@ -109,28 +111,36 @@ int main() {
 
     //get the pid's
     if (read(fd_read, &firstGivenPid, sizeof(pid_t)) < 0) {
-        //todo handle
+        perror("failed to read from fifo");
+        if (close(fd_read) < 0) {
+            perror("failed to close fifo");
+        }
+        RealeseResoursecAndExit(shmid);
     }
 
     if (read(fd_read, &secondGivenPid, sizeof(pid_t)) < 0) {
-        //todo handle
+        perror("failed to read from fifo");
+        if (close(fd_read) < 0) {
+            perror("failed to close fifo");
+        }
+        RealeseResoursecAndExit(shmid);
     }
     //close the fifo
     if (close(fd_read) < 0) {
         perror("failed to close fifo");
-        exit(-1);
+        RealeseResoursecAndExit(shmid);
     }
 
     *memory = '$';
     //sending them the signal
     if (kill(firstGivenPid, SIGUSR1) < 0) {
         perror("failed to send signal");
-        exit(-1);
+        RealeseResoursecAndExit(shmid);
     }
 
     //wait for first player to make a move
     while (*memory == '$') {
-        sleep(1); //todo need sleep here
+        sleep(1);
     }
     //read the move
     loc = ReadData(data);
@@ -139,16 +149,30 @@ int main() {
     //send to other player a signal to start play
     if (kill(secondGivenPid, SIGUSR1) < 0) {
         perror("failed to send signal");
-        exit(-1);
+        RealeseResoursecAndExit(shmid);
     }
 
     //start following and managing the game
     RunGame(data);
-
-    //todo close the fifo
-    //todo delete the memory
-
+    //finish game
+    RealeseResoursecAndExit(shmid);
     return 0;
+}
+
+/**
+ * input - the memory identifier
+ * operation- delete the memory and exit
+ */
+void RealeseResoursecAndExit(int shmid) {
+    if (unlink("fifo_clientTOserver") < 0) {
+        perror("failed to close file");
+    }
+    /* remove it: */
+    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
+        perror("shmctl");
+        exit(1);
+    }
+    exit(0);
 }
 
 /**
@@ -208,7 +232,7 @@ void RunGame(char *data) {
     while (keepOn == KEEP_ON) {
 
         while (*memory == '$') {
-            sleep(1); //todo need this?
+            sleep(1);
         }
         //read the data
         loc = ReadData(data);
@@ -615,7 +639,7 @@ void HandleEnd(int winner) {
             perror("failed to write to screen");
         }
     }
-    //todo ReleaseMemoryEndExit();
+    return;
 }
 
 /**

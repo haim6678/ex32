@@ -107,6 +107,10 @@ int main() {
         perror("failed to write to fifo");
         exit(-1);
     }
+    if (close(fd_write) < 0) {
+        perror("failed to close fifo");
+        exit(-1);
+    }
     //wait for the signal
     pause();
 
@@ -201,7 +205,8 @@ struct Point *ParseStruct(char *move) {
     //create the struct
     struct Point *point = malloc(sizeof(struct Point));
     if (point == NULL) {
-        //todo handle
+        perror("failed to allocate space");
+        return NULL; //todo this handle is ok?
     } else {
         if ((x >= ROW_SIZE) || (x < 0) || (y < 0) || (y >= COL_SIZE)) {
             return NULL;
@@ -388,7 +393,6 @@ void StartPlaying() {
     while (1) {
         //get move from player
         moved = 0;
-        printf("your number is %d\n", myNumber); //todo remove this
         PrintRequest();
         moveCoordinats = GetUserInput();
         //move was out of bound
@@ -450,10 +454,7 @@ struct Point *GetUserInput() {
             input++;
         }
         if (input > 5) {
-            if (fseek(stdin, 0, SEEK_END) < 0) {
-                perror("failed fseek");
-                //todo exit?
-            }
+            //todo what to do?
             return NULL;
         }
     };
