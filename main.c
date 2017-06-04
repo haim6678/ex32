@@ -231,6 +231,52 @@ void ExecuteMoveOnBoard(struct Point loc) {
 }
 
 /**
+ * operation - print's the current game board on screen
+ */
+void PrintBoard() {
+
+    if (write(STDOUT_FILENO, "The board is: \n", strlen("The board is: \n")) < 0) {
+        perror("failed to write to screen");
+        //ReleaseMemoryEndExit();
+    }
+    int i = 0;
+    char temp[32];
+    //run in loop and print
+    for (i; i < ROW_SIZE; i++) {
+
+        int j = 0;
+        for (j; j < COL_SIZE; j++) {
+            if ((gameBoard[i][j]) > 0) {
+                memset(temp, 32, 0);
+                sprintf(temp, "%01d", gameBoard[i][j]);
+                if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
+                    perror("failed to write to file");
+                //    ReleaseMemoryEndExit();
+                }
+            } else {
+                memset(temp, 32, 0);
+                sprintf(temp, "%01d", gameBoard[i][j]);
+                if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
+                    perror("failed to write to file");
+              //      ReleaseMemoryEndExit();
+                }
+            }
+            if (write(STDOUT_FILENO, " ", strlen(" ")) < 0) {
+                perror("failed to write to file");
+            //    ReleaseMemoryEndExit();
+            }
+        }
+        if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
+            perror("failed to write to file");
+          //  ReleaseMemoryEndExit();
+        }
+    }
+    if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
+        perror("failed to write to file");
+        //ReleaseMemoryEndExit();
+    }
+}
+/**
  * input - the pointer to the shared memory
  * operation- runs the game,every time gets a move,update the board and checking
  *            if the game need to end
@@ -248,6 +294,7 @@ void RunGame(char *data) {
         loc = ReadData(data);
         //execute it
         ExecuteMoveOnBoard(loc);
+        PrintBoard();
         //check board status
         keepOn = CheckEnd();
     }
@@ -630,22 +677,22 @@ void ExecuteRightAndDown(struct Point *p, int myNumber) {
  */
 void HandleEnd(int winner) {
     //print game over and the winner
-    if (write(STDOUT_FILENO, "GAME OVER", strlen("GAME OVER")) < 0) {
+    if (write(STDOUT_FILENO, "GAME OVER\n", strlen("GAME OVER\n")) < 0) {
         perror("failed to write to screen");
     }
     if (winner == 1) {
         //white win
-        if (write(STDOUT_FILENO, "Winning player: White", strlen("Winning player: White")) < 0) {
+        if (write(STDOUT_FILENO, "Winning player: White\n", strlen("Winning player: White\n")) < 0) {
             perror("failed to write to screen");
         }
     } else if (winner == 2) {
         //black win
-        if (write(STDOUT_FILENO, "Winning player: Black", strlen("Winning player: Black")) < 0) {
+        if (write(STDOUT_FILENO, "Winning player: Black\n", strlen("Winning player: Black\n")) < 0) {
             perror("failed to write to screen");
         }
     } else if (winner == 3) {
         //they are even
-        if (write(STDOUT_FILENO, "No winning player", strlen("No winning player")) < 0) {
+        if (write(STDOUT_FILENO, "No winning player\n", strlen("No winning player\n")) < 0) {
             perror("failed to write to screen");
         }
     }
@@ -705,7 +752,7 @@ int CheckEnd() {
     for (i = 0; i < ROW_SIZE; i++) {
         for (j = 0; j < COL_SIZE; j++) {
             //if we found an empty space
-            if (gameBoard[i][j] != 0) {
+            if (gameBoard[i][j] == 0) {
                 flag = KEEP_ON;
                 break;
             }
