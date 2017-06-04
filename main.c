@@ -98,6 +98,8 @@ int main() {
         exit(1);
     }
     memory = data;
+    //
+    //*memory = '\0';
     //create fifo
     file = mkfifo("fifo_clientTOserver", 0666);
     if (file < 0) {
@@ -141,7 +143,7 @@ int main() {
         perror("failed to close fifo");
         RealeseResoursecAndExit(shmid);
     }
-    *memory = '$';
+
     //sending them the signal
     if (kill(firstGivenPid, SIGUSR1) < 0) {
         perror("failed to send signal");
@@ -149,7 +151,7 @@ int main() {
     }
 
     //wait for first player to make a move
-    while (*memory == '$') {
+    while (*memory != 'b') {
         sleep(1);
     }
     //read the move

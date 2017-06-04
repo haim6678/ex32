@@ -21,7 +21,7 @@ struct Point {
 int gameBoard[ROW_SIZE][COL_SIZE];
 
 void PrintNoMoveInput();
-
+void HandleEnd(int winner);
 void PrintRequest();
 
 struct Point *GetUserInput();
@@ -373,7 +373,7 @@ void StartPlaying() {
         perror("shmat");
         exit(1);
     }
-    if (*data == '$') {
+    if (*data != 'b') {
         myBoardNumber = 2;
     } else {
         myBoardNumber = 1;
@@ -452,9 +452,9 @@ void StartPlaying() {
 struct Point *GetUserInput() {
     int input;
     char tempInput;
-    char move[6];
+    char move[100];
     input = 0;
-    memset(move, '\0', 6);
+    memset(move, '\0', 100);
     while (1) {
         if (read(STDIN_FILENO, &tempInput, 1) < 0) {
             perror("failed to read from stdin");
@@ -465,10 +465,6 @@ struct Point *GetUserInput() {
         } else {
             move[input] = tempInput;
             input++;
-        }
-        if (input > 5) {
-            //todo what to do?
-            return NULL;
         }
     };
     //parse the point from the user
