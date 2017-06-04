@@ -61,7 +61,7 @@ int main() {
     //todo why need to delete the fifo file every time
     //todo different between shmdt and shmctl and if there is do i need both?
     //todo if i delete here do i need to delete in ex32 the memory?
-    //todo if i open here and in client the fifo file do i need 2 unlink? in a normal file an in fifo is there a different?
+    //todo if i open here and in client the fifo file do i need 2 unlink? in a normal file an in fifo is there a different? right now it's working with 1 unlink
 
     key_t key;
     int shmid;
