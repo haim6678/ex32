@@ -396,8 +396,6 @@ void StartPlaying() {
         moved = 0;
         PrintRequest();
         moveCoordinats = GetUserInput();
-        printf("%d,%d", moveCoordinats->x, moveCoordinats->y);
-        printf("\n");
         //move was out of bound
         if (moveCoordinats == NULL) {
             PrintInvalidInputError();
