@@ -77,8 +77,6 @@ int main() {
     int fd_write;
     pid_t myPid;
 
-    //todo change x,y
-
     //set the board
     memset(gameBoard, 0, ROW_SIZE * COL_SIZE * sizeof(int));
     gameBoard[3][3] = 2;
@@ -205,7 +203,7 @@ struct Point *ParseStruct(char *move) {
     if(temp[0] !='['){
         return NULL;
     }
-    x = temp[1] - 48;
+    y = temp[1] - 48;
     temp = strtok(NULL, ",");
     //more then 1 digit entered
     if ((temp == NULL) || (strlen(temp) > 2)) {
@@ -214,7 +212,7 @@ struct Point *ParseStruct(char *move) {
     if(temp[1] !=']'){
         return NULL;
     }
-    y = temp[0] - 48;
+    x = temp[0] - 48;
     //create the struct
     struct Point *point = malloc(sizeof(struct Point));
     if (point == NULL) {
