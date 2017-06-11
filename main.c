@@ -23,7 +23,7 @@ struct Point {
 //declare the functions
 int CheckEnd();
 
-struct Point ReadData(char *data);
+int ReadData(char *data);
 
 void ExecuteUp(struct Point *loc, int number);
 
@@ -57,11 +57,6 @@ void RealeseResoursecAndExit(int shmid);
  * operation- the main function
  */
 int main() {
-    //todo why need ex31.c in the directory
-    //todo why need to delete the fifo file every time
-    //todo different between shmdt and shmctl and if there is do i need both?
-    //todo if i delete here do i need to delete in ex32 the memory?
-    //todo if i open here and in client the fifo file do i need 2 unlink? in a normal file an in fifo is there a different? right now it's working with 1 unlink
 
     key_t key;
     int shmid;
@@ -70,7 +65,7 @@ int main() {
     int fd_read;
     pid_t firstGivenPid = 0;
     pid_t secondGivenPid = 0;
-    struct Point loc;
+    int loc;
     //set the board
     memset(gameBoard, 0, sizeof(char) * ROW_SIZE * COL_SIZE);
     //initial the game with the black and white cells.
@@ -99,7 +94,7 @@ int main() {
     }
     memory = data;
     //
-    //*memory = '\0';
+    *memory = '\0';
     //create fifo
     file = mkfifo("fifo_clientTOserver", 0666);
     if (file < 0) {
@@ -156,8 +151,6 @@ int main() {
     }
     //read the move
     loc = ReadData(data);
-    //execute it
-    ExecuteMoveOnBoard(loc);
     //send to other player a signal to start play
     if (kill(secondGivenPid, SIGUSR1) < 0) {
         perror("failed to send signal");
@@ -192,7 +185,7 @@ void RealeseResoursecAndExit(int shmid) {
  * output- the second player move
  * operation - reads from memory
  */
-struct Point ReadData(char *data) {
+int ReadData(char *data) {
     int x;
     int y;
     char temp;
@@ -203,6 +196,10 @@ struct Point ReadData(char *data) {
         player = 2;
     } else if (temp == 'w') {
         player = 1;
+    } else if( temp == '*'){
+        return 1;
+    } else{
+        return 0;
     }
     (*memory++);
     x = (*memory) - 48;
@@ -210,467 +207,32 @@ struct Point ReadData(char *data) {
     y = (*memory) - 48;
     (*memory++);
     (*memory++);
-    struct Point p;
-    p.y = y;
-    p.x = x;
-    p.player = player;
-    return p;
+    return 0;
 }
 
-/**
- * input - the location which the player put is piece
- * operation- perform is move and update the board
- */
-void ExecuteMoveOnBoard(struct Point loc) {
-    ExecuteUp(&loc, loc.player);
-    ExecuteDown(&loc, loc.player);
-    ExecuteLeft(&loc, loc.player);
-    ExecuteRight(&loc, loc.player);
-    ExecuteRightAndUp(&loc, loc.player);
-    ExecuteRightAndDown(&loc, loc.player);
-    ExecuteLeftAndUp(&loc, loc.player);
-    ExecuteLeftAndDown(&loc, loc.player);
-}
 
-/**
- * operation - print's the current game board on screen
- */
-void PrintBoard() {
-
-    if (write(STDOUT_FILENO, "The board is: \n", strlen("The board is: \n")) < 0) {
-        perror("failed to write to screen");
-        //ReleaseMemoryEndExit();
-    }
-    int i = 0;
-    char temp[32];
-    //run in loop and print
-    for (i; i < ROW_SIZE; i++) {
-
-        int j = 0;
-        for (j; j < COL_SIZE; j++) {
-            if ((gameBoard[i][j]) > 0) {
-                memset(temp, 32, 0);
-                sprintf(temp, "%01d", gameBoard[i][j]);
-                if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
-                    perror("failed to write to file");
-                //    ReleaseMemoryEndExit();
-                }
-            } else {
-                memset(temp, 32, 0);
-                sprintf(temp, "%01d", gameBoard[i][j]);
-                if (write(STDOUT_FILENO, temp, strlen(temp)) < 0) {
-                    perror("failed to write to file");
-              //      ReleaseMemoryEndExit();
-                }
-            }
-            if (write(STDOUT_FILENO, " ", strlen(" ")) < 0) {
-                perror("failed to write to file");
-            //    ReleaseMemoryEndExit();
-            }
-        }
-        if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
-            perror("failed to write to file");
-          //  ReleaseMemoryEndExit();
-        }
-    }
-    if (write(STDOUT_FILENO, "\n", strlen("\n")) < 0) {
-        perror("failed to write to file");
-        //ReleaseMemoryEndExit();
-    }
-}
 /**
  * input - the pointer to the shared memory
- * operation- runs the game,every time gets a move,update the board and checking
- *            if the game need to end
+ * operation- keep an aye on the game, if it's end-then finish the process
  */
 void RunGame(char *data) {
-
     int keepOn = KEEP_ON;
-    struct Point loc;
+    int check = 0;
     while (keepOn == KEEP_ON) {
-
-        while (*memory == '$') {
-            sleep(1);
+        check = ReadData(data);
+        if (check == 1){
+            break;
         }
-        //read the data
-        loc = ReadData(data);
-        //execute it
-        ExecuteMoveOnBoard(loc);
-        PrintBoard();
-        //check board status
-        keepOn = CheckEnd();
+        sleep(1);
     }
+    (*memory++);
+    (*memory++);
+    while (*memory != '*'){
 
+    }
+    (*memory--);
+    keepOn =((*memory) - 48);
     HandleEnd(keepOn);
-}
-
-/*
-/**
- * input- get the point where thw player locate is new piece,a flag to update if we change
- *        something,and a flag to say what's my number on board
- * operation- checking if from the piece position to the right there is a legal move
- *            (that in the end there a second piece of my kind)
- *
- */
-
-void ExecuteRight(struct Point *p, int myNumber) {
-    int endX = -1;
-    int endY = -1;
-    int startX = p->x;
-    int startY = p->y;
-
-    //check if right from the given move there is an empty space or my piece
-    if ((startY + 1 >= COL_SIZE) || (gameBoard[startX][startY + 1] == 0) ||
-        (gameBoard[startX][startY + 1] == myNumber)) {
-        return;
-
-        /*check if the move is legal and there is a sequence of the other player pieces
-        /with no whitespace and in the and again my piece*/
-    } else {
-        startY++;
-        while ((endX == -1) && (endY == -1) && (startY < COL_SIZE)) {
-
-            //if there is'nt my piece in the other side from the right
-            if (gameBoard[startX][startY] == 0) {
-                break;
-            }
-            if ((gameBoard[startX][startY] == myNumber)) {
-                endX = startX;
-                endY = startY;
-            }
-            startY++;
-        }
-    }
-
-    //if we found the move legal the change the board and
-    if ((endX != -1) && (endY != -1)) {
-        startX = p->x;
-        startY = p->y;
-        while (startY < endY) {
-            gameBoard[startX][startY] = myNumber;
-            startY++;
-        }
-    }
-}
-
-/**
- * input- get the point where thw player locate is new piece,a flag to update if we change
- *        something,and a flag to say what's my number on board
- * operation- checking if from the piece position to the left there is a legal move
- *            (that in the end there a second piece of my kind)
- */
-void ExecuteLeft(struct Point *p, int myNumber) {
-    int endX = -1;
-    int endY = -1;
-    int startX = p->x;
-    int startY = p->y;
-    //check if left from the given move there is an empty space or my piece
-    if ((startY - 1 < 0) || (gameBoard[startX][startY - 1] == 0) ||
-        (gameBoard[startX][startY - 1] == myNumber)) {
-        return;
-
-        /*check if the move is legal and there is a sequence of the other player pieces
-        /with no whitespace and in the and again my piece*/
-    } else {
-        startY--;
-        while ((endX == -1) && (endY == -1) && (startY >= 0)) {
-
-            //if there is'nt my piece in the other side from the left
-            if (gameBoard[startX][startY] == 0) {
-                break;
-            }
-            if ((gameBoard[startX][startY] == myNumber)) {
-                endX = startX;
-                endY = startY;
-            }
-            startY--;
-        }
-    }
-    //if we found the move legal the change the board
-    if ((endX != -1) && (endY != -1)) {
-        startX = p->x;
-        startY = p->y;
-        while (startY > endY) {
-            gameBoard[startX][startY] = myNumber;
-            startY--;
-        }
-    }
-}
-
-/**
- * input- get the point where thw player locate is new piece,a flag to update if we change
- *        something,and a flag to say what's my number on board
- * operation- checking if from the piece position to upward there is a legal move
- *            (that in the end there a second piece of my kind)
- */
-void ExecuteUp(struct Point *p, int myNumber) {
-    int endX = -1;
-    int endY = -1;
-    int startX = p->x;
-    int startY = p->y;
-    //check if above from the given move there is an empty space or my piece
-    if ((startX - 1 < 0) || (gameBoard[startX - 1][startY] == 0) ||
-        (gameBoard[startX - 1][startY] == myNumber)) {
-        return;
-
-        /*check if the move is legal and there is a sequence of the other player pieces
-        /with no whitespace and in the and again my piece*/
-    } else {
-        startX--;
-        while ((endX == -1) && (endY == -1) && (startX >= 0)) {
-
-            //if there is'nt my piece in the other side from the above
-            if (gameBoard[startX][startY] == 0) {
-                break;
-            }
-            if ((gameBoard[startX][startY] == myNumber)) {
-                endX = startX;
-                endY = startY;
-            }
-            startX--;
-        }
-    }
-    //if we found the move legal the change the board
-    if ((endX != -1) && (endY != -1)) {
-        startX = p->x;
-        startY = p->y;
-        while (startX > endX) {
-            gameBoard[startX][startY] = myNumber;
-            startX--;
-        }
-    }
-}
-
-/**
- * input- get the point where thw player locate is new piece,a flag to update if we change
- *        something,and a flag to say what's my number on board
- * operation- checking if from the piece position to down there is a legal move
- *            (that in the end there a second piece of my kind)
- */
-void ExecuteDown(struct Point *p, int myNumber) {
-    int endX = -1;
-    int endY = -1;
-    int startX = p->x;
-    int startY = p->y;
-    //check if below from the given move there is an empty space or my piece
-    if ((startX + 1 >= ROW_SIZE) || (gameBoard[startX + 1][startY] == 0) ||
-        (gameBoard[startX + 1][startY] == myNumber)) {
-        return;
-
-        /*check if the move is legal and there is a sequence of the other player pieces
-        /with no whitespace and in the and again my piece*/
-    } else {
-        startX++;
-        while ((endX == -1) && (endY == -1) && (startX < ROW_SIZE)) {
-
-            //if there is'nt my piece in the other side from the bottom
-            if (gameBoard[startX][startY] == 0) {
-                break;
-            }
-            if ((gameBoard[startX][startY] == myNumber)) {
-                endX = startX;
-                endY = startY;
-            }
-            startX++;
-        }
-    }
-    //if we found the move legal the change the board
-    if ((endX != -1) && (endY != -1)) {
-        startX = p->x;
-        startY = p->y;
-        while (startX < endX) {
-            gameBoard[startX][startY] = myNumber;
-            startX++;
-        }
-    }
-}
-
-/**
- * input- get the point where thw player locate is new piece,a flag to update if we change
- *        something,and a flag to say what's my number on board
- * operation- checking if from the piece position to the left and up there is a legal move
- *            (that in the end there a second piece of my kind)
- */
-void ExecuteLeftAndUp(struct Point *p, int myNumber) {
-    int endX = -1;
-    int endY = -1;
-    int startX = p->x;
-    int startY = p->y;
-    //check if left and up from the given move there is an empty space or my piece
-    if ((startY - 1 < 0) || (startX - 1 < 0) || (gameBoard[startX - 1][startY - 1] == 0) ||
-        (gameBoard[startX - 1][startY - 1] == myNumber)) {
-        return;
-
-        /*check if the move is legal and there is a sequence of the other player pieces
-        /with no whitespace and in the and again my piece*/
-    } else {
-        startX--;
-        startY--;
-        while ((endX == -1) && (endY == -1) && (startX >= 0) && (startY >= 0)) {
-
-            //if there is'nt my piece in the other side from the left and up
-            if (gameBoard[startX][startY] == 0) {
-                break;
-            }
-            if ((gameBoard[startX][startY] == myNumber)) {
-                endX = startX;
-                endY = startY;
-            }
-            startX--;
-            startY--;
-        }
-    }
-    //if we found the move legal the change the board and update the flag to 1
-    if ((endX != -1) && (endY != -1)) {
-        startX = p->x;
-        startY = p->y;
-        while ((startX > endX) && (startY > endY)) {
-            gameBoard[startX][startY] = myNumber;
-            startX--;
-            startY--;
-        }
-    }
-}
-
-/**
- * input- get the point where thw player locate is new piece,a flag to update if we change
- *        something,and a flag to say what's my number on board
- * operation- checking if from the piece position to the left and down there is a legal move
- *            (that in the end there a second piece of my kind)
- */
-void ExecuteLeftAndDown(struct Point *p, int myNumber) {
-    int endX = -1;
-    int endY = -1;
-    int startX = p->x;
-    int startY = p->y;
-    //check if left and down from the given move there is an empty space or my piece
-    if ((startY - 1 < 0) || (startX + 1 >= ROW_SIZE) || (gameBoard[startX + 1][startY - 1] == 0) ||
-        (gameBoard[startX + 1][startY - 1] == myNumber)) {
-        return;
-
-        /*check if the move is legal and there is a sequence of the other player pieces
-        /with no whitespace and in the and again my piece*/
-    } else {
-        startX++;
-        startY--;
-        while ((endX == -1) && (endY == -1) && (startX < ROW_SIZE) && (startY >= 0)) {
-
-            //if there is'nt my piece in the other side from the left and down
-            if (gameBoard[startX][startY] == 0) {
-                break;
-            }
-            if ((gameBoard[startX][startY] == myNumber)) {
-                endX = startX;
-                endY = startY;
-            }
-            startX++;
-            startY--;
-        }
-    }
-    //if we found the move legal the change the board
-    if ((endX != -1) && (endY != -1)) {
-        startX = p->x;
-        startY = p->y;
-        while ((startX < endX) && (startY > endY)) {
-            gameBoard[startX][startY] = myNumber;
-            startX++;
-            startY--;
-        }
-    }
-}
-
-/**
- * input- get the point where thw player locate is new piece,a flag to update if we change
- *        something,and a flag to say what's my number on board
- * operation- checking if from the piece position to the right and up there is a legal move
- *            (that in the end there a second piece of my kind)
- */
-void ExecuteRightAndUp(struct Point *p, int myNumber) {
-    int endX = -1;
-    int endY = -1;
-    int startX = p->x;
-    int startY = p->y;
-    //check if right and up from the given move there is an empty space or my piece
-    if ((startY + 1 >= COL_SIZE) || (startX - 1 < 0) || (gameBoard[startX - 1][startY + 1] == 0) ||
-        (gameBoard[startX - 1][startY + 1] == myNumber)) {
-        return;
-
-        /*check if the move is legal and there is a sequence of the other player pieces
-        /with no whitespace and in the and again my piece*/
-    } else {
-        startX--;
-        startY++;
-        while ((endX == -1) && (endY == -1) && (startX >= 0) && (startY < COL_SIZE)) {
-
-            //if there is'nt my piece in the other side from the right and up
-            if (gameBoard[startX][startY] == 0) {
-                break;
-            }
-            if ((gameBoard[startX][startY] == myNumber)) {
-                endX = startX;
-                endY = startY;
-            }
-            startX--;
-            startY++;
-        }
-    }
-    //if we found the move legal the change the board
-    if ((endX != -1) && (endY != -1)) {
-        startX = p->x;
-        startY = p->y;
-        while ((startX > endX) && (startY < endY)) {
-            gameBoard[startX][startY] = myNumber;
-            startX--;
-            startY++;
-        }
-    }
-}
-
-/**
- * input- get the point where thw player locate is new piece,a flag to update if we change
- *        something,and a flag to say what's my number on board
- * operation- checking if from the piece position to the right and down there is a legal move
- *            (that in the end there a second piece of my kind)
- */
-void ExecuteRightAndDown(struct Point *p, int myNumber) {
-    int endX = -1;
-    int endY = -1;
-    int startX = p->x;
-    int startY = p->y;
-    //check if right and down from the given move there is an empty space or my piece
-    if ((startY + 1 >= COL_SIZE) || (startX + 1 >= ROW_SIZE) | (gameBoard[startX + 1][startY + 1] == 0) ||
-        (gameBoard[startX + 1][startY + 1] == myNumber)) {
-        return;
-
-        /*check if the move is legal and there is a sequence of the other player pieces
-        /with no whitespace and in the and again my piece*/
-    } else {
-        startX++;
-        startY++;
-        while ((endX == -1) && (endY == -1) && (startX < ROW_SIZE) && (startY < COL_SIZE)) {
-
-            //if there is'nt my piece in the other side from the right and down
-            if (gameBoard[startX][startY] == 0) {
-                break;
-            }
-            if ((gameBoard[startX][startY] == myNumber)) {
-                endX = startX;
-                endY = startY;
-            }
-            startX++;
-            startY++;
-        }
-    }
-    //if we found the move legal the change the board and update the flag to 1
-    if ((endX != -1) && (endY != -1)) {
-        startX = p->x;
-        startY = p->y;
-        while ((startX < endX) && (startY < endY)) {
-            gameBoard[startX][startY] = myNumber;
-            startX++;
-            startY++;
-        }
-    }
 }
 
 /**
@@ -700,73 +262,3 @@ void HandleEnd(int winner) {
     }
     return;
 }
-
-/**
- * input - a flag that indicate the sort of check we conduct
- * operation - check if the board is full, or there is only one color
- */
-int CheckWinner(int flag) {
-
-    int i = 0;
-    int j = 0;
-    int white = 0;
-    int black = 0;
-    for (i = 0; i < ROW_SIZE; i++) {
-        for (j = 0; j < COL_SIZE; j++) {
-
-            if (gameBoard[i][j] == 1) {
-                white++;
-            } else if (gameBoard[i][j] == 2) {
-                black++;
-            }
-        }
-    }
-    //check if full who won
-    if (flag == 1) {
-        if (black > white) {
-            return 2;
-        } else if (white > black) {
-            return 1;
-        } else {
-            return 3;
-        }
-        //if there is a space check what color is left on board
-    } else if (flag == 0) {
-        if ((black > 0) && (white == 0)) {
-            return 2;
-        } else if ((white > 0) && (black == 0)) {
-            return 1;
-        } else {
-            return KEEP_ON;
-        }
-    }
-}
-
-/**
- * operation- check if board is full or only one color left
- */
-int CheckEnd() {
-
-    int flag = 0;
-    int i = 0;
-    int j = 0;
-    //check the board
-    for (i = 0; i < ROW_SIZE; i++) {
-        for (j = 0; j < COL_SIZE; j++) {
-            //if we found an empty space
-            if (gameBoard[i][j] == 0) {
-                flag = KEEP_ON;
-                break;
-            }
-        }
-    }
-
-    //we didn't found an empty space
-    if (flag == 0) {
-        return CheckWinner(1);
-        //it's  -1 ->we found an empty space then keep playing and check if left a move
-    } else {
-        return CheckWinner(0);
-    }
-}
-
